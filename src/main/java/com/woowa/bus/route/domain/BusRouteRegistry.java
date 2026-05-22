@@ -29,7 +29,7 @@ public class BusRouteRegistry {
                 .orElseThrow(() -> {
                     log.warn("Supported station not found. stationName={}, availableStations={}", stationName, stations.stream().map(SupportedBusStation::name).toList());
                     return new BusRouteException("""
-                        지원하지 않는 정류장이에요.
+                        ⚠️ *지원하지 않는 정류장이에요*
 
                         사용 가능한 정류장:
                         %s""".formatted(availableStationMessage()));
@@ -53,7 +53,7 @@ public class BusRouteRegistry {
 
     private String availableStationMessage() {
         return stations().stream()
-                .map(station -> "- " + station.name())
+                .map(station -> "• " + station.name())
                 .reduce((left, right) -> left + "\n" + right)
                 .orElse("");
     }

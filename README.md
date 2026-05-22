@@ -8,16 +8,22 @@
 - `/조회 [정류장]`
 - `/조회 [정류장] [버스번호]`
 - `/알림 [정류장] [버스번호] [몇 분 전] [시작시간] [종료시간]`
+- `/알림 초기화`
 - `/알림목록`
 - `/알림삭제 [정류장] [버스번호]`
 - 정류장 별칭 허용
 - 조회 결과는 도착 시간 순으로 정렬
 - `/도움말`
 - `/상태`
+- `/조회` 결과는 Block Kit으로 렌더링
 - `/알림목록`은 Block Kit으로 렌더링
 - `/알림목록`에서 삭제 버튼 제공
+- 삭제 버튼을 누르면 기존 목록 메시지를 삭제 완료 메시지와 갱신된 알림목록으로 교체
 - `/알림`을 인자 없이 입력하면 Modal로 등록 (정류장 선택, 시간 선택)
-- 알림 DM의 "탑승 완료" 버튼을 누르면 오늘 더 이상 알림 발송 안 함
+- Modal 등록 성공 시 사용자에게 등록 완료 DM 발송
+- 알림 DM에는 현재 시각과 "탑승 완료" 버튼 표시
+- 알림 DM의 "탑승 완료" 버튼을 누르면 오늘 더 이상 모든 알림 발송 안 함
+- `/알림 초기화`로 탑승 완료 이후 오늘 중지된 알림을 다시 울리도록 초기화
 - 1분 주기 알림 스케줄링
 - 같은 알림 10분 내 중복 발송 방지
 - 같은 사용자, 정류장, 버스번호 조합의 중복 등록 시 기존 알림 업데이트
@@ -31,6 +37,8 @@
 - H2 file mode
 - Slack Slash Command
 - Slack `chat.postMessage`
+- Slack `views.open`
+- Slack Block Kit Interactivity
 - 경기버스 API
 - Gradle
 
@@ -82,9 +90,9 @@ Slack token, signing secret, 경기버스 API key는 환경변수로만 주입�
 테스트는 `src/test/resources/application.properties`의 H2 in-memory 설정을 사용합니다.
 실행 중 생성되는 file mode DB와 분리되어 있습니다.
 
-## Slack Slash Command 설정
+## Slack App 설정
 
-Slack App에서 아래 명령어를 생성하고, Request URL을 ngrok 주소와 연결합니다.
+Slack App에서 아래 Slash Command를 생성하고, Request URL을 ngrok 또는 배포 주소와 연결합니다.
 
 | Slack 명령어 | Request URL |
 | --- | --- |
@@ -95,14 +103,6 @@ Slack App에서 아래 명령어를 생성하고, Request URL을 ngrok 주소와
 | `/도움말` | `POST /slack/commands/help` |
 | `/상태` | `POST /slack/commands/status` |
 
-Interactivity Request URL (Block Kit 버튼 클릭 처리):
-
-```text
-https://{ngrok-domain}/slack/actions
-```
-
-`/알림목록` 응답은 Block Kit으로 렌더링되며, 각 알림 옆 `삭제` 버튼이 `/slack/actions` 엔드포인트로 인터랙티브 페이로드를 전송합니다.
-
 예시:
 
 ```text
@@ -111,7 +111,30 @@ https://{ngrok-domain}/slack/commands/alert
 https://{ngrok-domain}/slack/commands/alert-list
 https://{ngrok-domain}/slack/commands/alert-delete
 https://{ngrok-domain}/slack/commands/help
+https://{ngrok-domain}/slack/commands/status
 ```
+
+Interactivity & Shortcuts 설정에서 Interactivity를 켜고, Request URL을 아래처럼 연결합니다.
+
+```text
+https://{ngrok-domain}/slack/actions
+```
+
+`/slack/actions`는 아래 Slack 인터랙션을 처리합니다.
+
+- `/알림` Modal 제출
+- `/알림목록`의 `삭제` 버튼
+- 알림 DM의 `탑승 완료` 버튼
+
+현재 Modal의 정류장 선택은 `static_select`를 사용하므로 Options Load URL은 비워둡니다.
+
+Bot Token Scopes에는 최소한 아래 권한이 필요합니다.
+
+- `chat:write`
+- `commands`
+
+`/조회`, `/알림목록`, `/알림 초기화`, 명령어 기반 알림 등록 응답은 본인에게만 보이는 ephemeral 응답으로 반환됩니다.
+알림 발송과 Modal 등록 성공 메시지는 `chat.postMessage`로 사용자 DM에 전송됩니다.
 
 ## 명령어 예시
 
@@ -131,6 +154,18 @@ https://{ngrok-domain}/slack/commands/help
 
 ```text
 /알림 텔레칩스 310 5 17:45 23:30
+```
+
+Modal로 알림 등록:
+
+```text
+/알림
+```
+
+오늘 중지된 알림 다시 울리기:
+
+```text
+/알림 초기화
 ```
 
 알림 목록 조회:
@@ -187,6 +222,10 @@ MVP에서는 정류장 이름 중복을 피하기 위해 아래 정류장만 지
 
 MVP에서는 자정을 넘기는 알림 시간을 지원하지 않습니다.
 예를 들어 `23:00 01:00`은 등록할 수 없습니다.
+
+알림 DM의 `탑승 완료` 버튼을 누르면 해당 사용자의 모든 알림이 오늘은 더 이상 울리지 않습니다.
+다음 날에는 다시 알림이 울립니다.
+당일에 다시 알림을 받고 싶으면 `/알림 초기화`를 입력합니다.
 
 ## 입력 검증
 
@@ -256,8 +295,10 @@ com.woowa.bus
 ## 데모 체크리스트
 
 - [ ] Slack App 생성
-- [ ] Slash Command 4개 생성
-- [ ] ngrok URL 연결
+- [ ] Slash Command 6개 생성
+- [ ] 각 Slash Command Request URL을 ngrok 또는 배포 URL로 연결
+- [ ] Interactivity & Shortcuts 켜기
+- [ ] Interactivity Request URL을 `/slack/actions`로 연결
 - [ ] `SLACK_BOT_TOKEN` 설정
 - [ ] `SLACK_SIGNING_SECRET` 설정
 - [ ] `GBIS_SERVICE_KEY` 설정
@@ -265,6 +306,11 @@ com.woowa.bus
 - [x] 벤처타운(북문) `stationId` 확보
 - [ ] `bus_routes` 테이블 자동 동기화 확인
 - [ ] `/조회 텔레칩스` 응답 확인
+- [ ] `/조회 텔레칩스 310` Block Kit 응답 확인
 - [ ] `/알림 텔레칩스 310 5 17:45 23:30` 등록 확인
+- [ ] `/알림` Modal 등록 확인
 - [ ] `/알림목록` 확인
+- [ ] `/알림목록` 삭제 버튼 확인
 - [ ] Slack DM 알림 발송 확인
+- [ ] 알림 DM의 `탑승 완료` 버튼 확인
+- [ ] `/알림 초기화` 후 알림 재발송 가능 여부 확인

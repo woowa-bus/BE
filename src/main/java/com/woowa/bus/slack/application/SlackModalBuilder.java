@@ -36,7 +36,7 @@ public class SlackModalBuilder {
         root.put("type", "modal");
         root.put("callback_id", CALLBACK_ALERT_CREATE);
         root.set("title", plainText("버스 알림 등록"));
-        root.set("submit", plainText("등록"));
+        root.set("submit", plainText("알림 등록"));
         root.set("close", plainText("취소"));
 
         ArrayNode blocks = root.putArray("blocks");
@@ -54,7 +54,7 @@ public class SlackModalBuilder {
         ObjectNode element = input.putObject("element");
         element.put("type", "static_select");
         element.put("action_id", ACTION_STATION);
-        element.set("placeholder", plainText("정류장을 선택해 주세요."));
+        element.set("placeholder", plainText("정류장을 선택해 주세요"));
         ArrayNode options = element.putArray("options");
         for (String name : busRouteRegistry.stationNames()) {
             ObjectNode option = options.addObject();
@@ -65,7 +65,7 @@ public class SlackModalBuilder {
     }
 
     private ObjectNode busInput() {
-        ObjectNode input = inputBlock(BLOCK_BUS, "버스번호");
+        ObjectNode input = inputBlock(BLOCK_BUS, "버스 번호");
         ObjectNode element = input.putObject("element");
         element.put("type", "plain_text_input");
         element.put("action_id", ACTION_BUS);
@@ -74,13 +74,14 @@ public class SlackModalBuilder {
     }
 
     private ObjectNode notifyBeforeInput() {
-        ObjectNode input = inputBlock(BLOCK_NOTIFY_BEFORE, "도착 몇 분 전 (1~30)");
+        ObjectNode input = inputBlock(BLOCK_NOTIFY_BEFORE, "알림 기준 시간");
         ObjectNode element = input.putObject("element");
         element.put("type", "number_input");
         element.put("action_id", ACTION_NOTIFY_BEFORE);
         element.put("is_decimal_allowed", false);
         element.put("min_value", "1");
         element.put("max_value", "30");
+        input.set("hint", plainText("도착 몇 분 전에 알려드릴까요? 1~30 사이 숫자를 입력해 주세요."));
         return input;
     }
 

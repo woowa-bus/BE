@@ -22,20 +22,20 @@ public final class BusMessageFormatter {
         String body = arrivals.stream()
                 .map(BusMessageFormatter::stationArrivalLine)
                 .reduce((left, right) -> left + "\n" + right)
-                .orElse("현재 도착 예정 정보가 없어요.");
+                .orElse("도착 예정 정보 없음");
         return """
-                🚌 %s 정류장 도착 정보
+                🚌 *%s 정류장 도착 정보*
 
                 %s""".formatted(stationName, body);
     }
 
     public static String busArrival(String stationName, String busNumber, BusArrivalResult arrival) {
         return """
-                🚌 %s번 버스 도착 정보
+                🚌 *%s번 버스 도착 정보*
 
-                정류장: %s
-                %s
-                %s""".formatted(
+                • 정류장: %s
+                • %s
+                • %s""".formatted(
                 busNumber,
                 stationName,
                 arrivalFirstLine(arrival),
@@ -45,22 +45,22 @@ public final class BusMessageFormatter {
 
     public static String noRegisteredBus(String stationName) {
         return """
-                등록된 버스 정보가 없어요.
+                ℹ️ *등록된 버스 정보가 없어요*
 
-                정류장: %s""".formatted(stationName);
+                • 정류장: %s""".formatted(stationName);
     }
 
     public static String noArrival(String stationName, String busNumber) {
         return """
-                현재 도착 예정 정보가 없어요.
+                ℹ️ *현재 도착 예정 정보가 없어요*
 
-                정류장: %s
-                버스: %s번""".formatted(stationName, busNumber);
+                • 정류장: %s
+                • 버스: %s번""".formatted(stationName, busNumber);
     }
 
     public static String busApiFailure() {
         return """
-                버스 정보를 가져오지 못했어요.
+                ⚠️ *버스 정보를 가져오지 못했어요*
                 잠시 후 다시 시도해 주세요.""";
     }
 
@@ -68,11 +68,11 @@ public final class BusMessageFormatter {
         return """
                 %s
 
-                정류장: %s
-                버스: %s번
-                알림 기준: 도착 %d분 전
-                알림 시간: %s~%s
-                알림 방식: DM""".formatted(
+                • 정류장: %s
+                • 버스: %s번
+                • 알림 기준: 도착 %d분 전
+                • 알림 시간: %s~%s
+                • 알림 방식: DM""".formatted(
                 title,
                 command.stationName(),
                 command.busNumber(),
@@ -83,19 +83,23 @@ public final class BusMessageFormatter {
     }
 
     public static String alertDeleted(BusAlert alert) {
-        return "🗑️ %s %s번 알림을 삭제했어요.".formatted(alert.stationName(), alert.busNumber());
+        return """
+                🗑️ *알림을 삭제했어요*
+
+                • 정류장: %s
+                • 버스: %s번""".formatted(alert.stationName(), alert.busNumber());
     }
 
     public static String alertNotification(BusAlert alert, BusArrivalResult arrival, LocalDateTime now) {
         return """
-                🔔 %s번 버스가 곧 도착해요!
+                🔔 *%s번 버스가 곧 도착해요*
 
-                현재 시각: %s
-                정류장: %s
-                예상 도착: %s
-                다음 버스: %s
-                알림 기준: %d분 전
-                알림 시간: %s~%s""".formatted(
+                • 현재 시각: %s
+                • 정류장: %s
+                • 예상 도착: %s
+                • 다음 버스: %s
+                • 알림 기준: 도착 %d분 전
+                • 알림 시간: %s~%s""".formatted(
                 alert.busNumber(),
                 now.format(TIME_FORMATTER),
                 alert.stationName(),
@@ -108,15 +112,15 @@ public final class BusMessageFormatter {
     }
 
     public static String alertList(List<BusAlertResponse> alerts) {
-        StringBuilder builder = new StringBuilder("🔔 등록된 버스 알림\n\n");
+        StringBuilder builder = new StringBuilder("🔔 *등록된 버스 알림*\n\n");
         for (int index = 0; index < alerts.size(); index++) {
             BusAlertResponse alert = alerts.get(index);
-            builder.append("%d. %s %s번\n".formatted(
+            builder.append("%d. *%s %s번*\n".formatted(
                     index + 1,
                     alert.stationName(),
                     alert.busNumber()
             ));
-            builder.append("   • 알림 기준: %d분 전\n".formatted(alert.notifyBeforeMinutes()));
+            builder.append("   • 알림 기준: 도착 %d분 전\n".formatted(alert.notifyBeforeMinutes()));
             builder.append("   • 알림 시간: %s~%s".formatted(
                     alert.startTime().format(TIME_FORMATTER),
                     alert.endTime().format(TIME_FORMATTER)
@@ -130,33 +134,34 @@ public final class BusMessageFormatter {
 
     public static String searchUsage() {
         return """
-                /조회 [정류장]
-                /조회 [정류장] [버스번호]
+                🔎 *조회 사용법*
 
-                예시:
-                /조회 텔레칩스
-                /조회 텔레칩스 310""";
+                • `/조회 텔레칩스`
+                • `/조회 텔레칩스 310`""";
     }
 
     public static String alertUsage() {
         return """
-                /알림 [정류장] [버스번호] [몇 분 전] [시작시간] [종료시간]
+                🔔 *알림 사용법*
 
-                예시:
-                /알림 텔레칩스 310 5 17:45 23:30""";
+                • `/알림`
+                • `/알림 텔레칩스 310 5 17:45 23:30`
+                • `/알림 초기화`
+
+                알림 기준 시간: 1~30분
+                시간 형식: HH:mm""";
     }
 
     public static String alertDeleteUsage() {
         return """
-                /알림삭제 [정류장] [버스번호]
+                🗑️ *알림 삭제 사용법*
 
-                예시:
-                /알림삭제 텔레칩스 310""";
+                • `/알림삭제 텔레칩스 310`""";
     }
 
     private static String stationArrivalLine(BusArrivalResult arrival) {
         if (!arrival.hasArrival()) {
-            return "• %s번: 현재 도착 예정 정보가 없어요.".formatted(arrival.busNumber());
+            return "• %s번: 도착 예정 정보 없음".formatted(arrival.busNumber());
         }
         if (arrival.predictTime2() == null) {
             return "• %s번: %s".formatted(arrival.busNumber(), arrivalText(arrival.predictTime1()));

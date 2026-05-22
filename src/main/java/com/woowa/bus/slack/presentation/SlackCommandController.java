@@ -30,6 +30,7 @@ public class SlackCommandController {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
             .ofPattern("HH:mm")
             .withResolverStyle(ResolverStyle.STRICT);
+    private static final String ALERT_RESET_COMMAND = "초기화";
 
     private final BusArrivalSearchService busArrivalSearchService;
     private final BusAlertService busAlertService;
@@ -104,6 +105,11 @@ public class SlackCommandController {
                 log.info("Slack alert modal opened. userId={}", slackUserId);
                 return ResponseEntity.ok("");
             }
+            if (tokens.length == 1 && ALERT_RESET_COMMAND.equals(tokens[0])) {
+                String response = busAlertService.resetNotifications(slackUserId);
+                log.info("Slack alert reset command completed. userId={}", slackUserId);
+                return jsonOk(slackBlockKitBuilder.ephemeralText(response));
+            }
             if (tokens.length != 5) {
                 return ResponseEntity.ok(alertUsage());
             }
@@ -132,7 +138,7 @@ public class SlackCommandController {
         List<BusAlertResponse> alerts = busAlertService.findAllBySlackUserId(slackUserId);
         log.info("Slack alert-list command. userId={}, alertCount={}", slackUserId, alerts.size());
         if (alerts.isEmpty()) {
-            return ResponseEntity.ok("등록된 버스 알림이 없어요.");
+            return ResponseEntity.ok("ℹ️ *아직 등록된 버스 알림이 없어요*");
         }
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -190,10 +196,10 @@ public class SlackCommandController {
             return Integer.parseInt(value);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException("""
-                    알림 기준 시간은 1~30분 사이로 입력해 주세요.
+                    ⚠️ *알림 기준 시간을 확인해 주세요*
 
-                    예시:
-                    /알림 텔레칩스 310 5 17:45 23:30""");
+                    • 범위: 1~30분
+                    • 예시: /알림 텔레칩스 310 5 17:45 23:30""");
         }
     }
 
@@ -202,10 +208,10 @@ public class SlackCommandController {
             return LocalTime.parse(value, TIME_FORMATTER);
         } catch (DateTimeParseException exception) {
             throw new IllegalArgumentException("""
-                    시간은 HH:mm 형식으로 입력해 주세요.
+                    ⚠️ *시간 형식을 확인해 주세요*
 
-                    예시:
-                    /알림 텔레칩스 310 5 17:45 23:30""");
+                    • 형식: HH:mm
+                    • 예시: /알림 텔레칩스 310 5 17:45 23:30""");
         }
     }
 

@@ -19,6 +19,7 @@ class BusStatusServiceTest {
 
         String message = service.status();
 
+        assertTrue(message.contains("🩺 *시스템 상태*"));
         assertTrue(message.contains("GBIS API"));
         assertTrue(message.contains("호출 없음"));
     }
@@ -35,8 +36,8 @@ class BusStatusServiceTest {
         String message = service.status();
 
         assertTrue(message.contains("총 4회"));
-        assertTrue(message.contains("성공 3"));
-        assertTrue(message.contains("실패 1"));
+        assertTrue(message.contains("성공: 3회"));
+        assertTrue(message.contains("실패: 1회"));
         assertTrue(message.contains("75.0%"));
         assertTrue(message.contains("300ms"));
         assertTrue(message.contains("timeout"));

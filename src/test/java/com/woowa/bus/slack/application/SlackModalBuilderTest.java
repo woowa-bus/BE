@@ -24,6 +24,8 @@ class SlackModalBuilderTest {
 
         assertEquals("modal", root.get("type").asText());
         assertEquals("alert_create", root.get("callback_id").asText());
+        assertEquals("버스 알림 등록", root.get("title").get("text").asText());
+        assertEquals("알림 등록", root.get("submit").get("text").asText());
 
         JsonNode blocks = root.get("blocks");
         assertEquals(5, blocks.size());

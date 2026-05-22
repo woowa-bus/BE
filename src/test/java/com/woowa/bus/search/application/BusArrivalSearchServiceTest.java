@@ -20,7 +20,7 @@ class BusArrivalSearchServiceTest {
         String message = service.searchStation("텔레칩스");
 
         assertEquals("""
-                🚌 텔레칩스 정류장 도착 정보
+                🚌 *텔레칩스 정류장 도착 정보*
 
                 • 310번: 4분 후 / 다음 13분 후
                 • 55번: 7분 후 / 다음 18분 후""", message);
@@ -38,9 +38,9 @@ class BusArrivalSearchServiceTest {
         String message = service.searchStation("텔레칩스");
 
         assertEquals("""
-                등록된 버스 정보가 없어요.
+                ℹ️ *등록된 버스 정보가 없어요*
 
-                정류장: 텔레칩스""", message);
+                • 정류장: 텔레칩스""", message);
     }
 
     @Test
@@ -50,11 +50,11 @@ class BusArrivalSearchServiceTest {
         String message = service.searchBus("텔레칩스", "310");
 
         assertEquals("""
-                🚌 310번 버스 도착 정보
+                🚌 *310번 버스 도착 정보*
 
-                정류장: 텔레칩스
-                첫 번째 버스: 4분 후
-                두 번째 버스: 13분 후""", message);
+                • 정류장: 텔레칩스
+                • 첫 번째 버스: 4분 후
+                • 두 번째 버스: 13분 후""", message);
     }
 
     @Test
@@ -64,7 +64,7 @@ class BusArrivalSearchServiceTest {
         String message = service.searchBus("텔레칩스", "310");
 
         assertEquals("""
-                버스 정보를 가져오지 못했어요.
+                ⚠️ *버스 정보를 가져오지 못했어요*
                 잠시 후 다시 시도해 주세요.""", message);
     }
 

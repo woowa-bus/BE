@@ -67,7 +67,7 @@ class SlackActionControllerTest {
         assertTrue(messageSender.lastResponseBodyJson.contains("\"replace_original\":true"));
         assertEquals("context", blocks.get(0).get("type").asText());
         assertTrue(blocks.get(0).get("elements").get(0).get("text").asText()
-                .contains("텔레칩스 310번 알림을 삭제했어요."));
+                .contains("알림을 삭제했어요"));
         assertEquals("divider", blocks.get(1).get("type").asText());
         assertEquals("header", blocks.get(2).get("type").asText());
         assertTrue(messageSender.lastResponseBodyJson.contains("🔔 등록된 버스 알림"));
@@ -169,8 +169,8 @@ class SlackActionControllerTest {
         assertEquals("310", alertService.lastBoardedBus);
         assertEquals("", body);
         assertTrue(messageSender.lastResponseBodyJson.contains("\"replace_original\":true"));
-        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 하루 고생하셨어요 내일 봐요~"));
-        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 알람은 더이상 울리지 않습니다."));
+        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 하루 고생하셨어요. 내일 봐요~"));
+        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 알림은 더 이상 울리지 않습니다."));
     }
 
     @Test
@@ -241,14 +241,19 @@ class SlackActionControllerTest {
             this.lastBoardedStation = stationName;
             this.lastBoardedBus = busNumber;
             return """
-                    오늘 하루 고생하셨어요 내일 봐요~
-                    오늘 알람은 더이상 울리지 않습니다.""";
+                    🌙 *오늘 하루 고생하셨어요. 내일 봐요~*
+
+                    오늘 알림은 더 이상 울리지 않습니다.""";
         }
 
         @Override
         public String delete(BusAlertDeleteCommand command) {
             this.lastDeleted = command;
-            return "🗑️ %s %s번 알림을 삭제했어요.".formatted(command.stationName(), command.busNumber());
+            return """
+                    🗑️ *알림을 삭제했어요*
+
+                    • 정류장: %s
+                    • 버스: %s번""".formatted(command.stationName(), command.busNumber());
         }
 
         @Override
@@ -258,10 +263,10 @@ class SlackActionControllerTest {
             }
             this.lastSaved = command;
             return """
-                    ✅ 버스 알림을 등록했어요.
+                    ✅ *버스 알림을 등록했어요*
 
-                    정류장: %s
-                    버스: %s번""".formatted(command.stationName(), command.busNumber());
+                    • 정류장: %s
+                    • 버스: %s번""".formatted(command.stationName(), command.busNumber());
         }
 
         @Override

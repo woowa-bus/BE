@@ -37,6 +37,8 @@ class SlackBlockKitBuilderTest {
                 .filter(accessory -> "button".equals(accessory.get("type").asText()))
                 .count();
         assertEquals(2, alertSections);
+        assertTrue(json.contains("*텔레칩스 310번*"));
+        assertTrue(json.contains("• 알림 기준: 도착 5분 전"));
 
         JsonNode firstButton = blocks.findValues("accessory").get(0);
         assertEquals("alert_delete", firstButton.get("action_id").asText());
@@ -47,7 +49,11 @@ class SlackBlockKitBuilderTest {
     void alertListAfterDelete_replaces_original_with_deleted_message_then_refreshed_alert_list() throws Exception {
         String json = builder.alertListAfterDelete(
                 List.of(BusAlertResponse.from(BusAlert.create("U123", "벤처타운(북문)", "55", 3, LocalTime.of(8, 0), LocalTime.of(9, 30)))),
-                "🗑️ 텔레칩스 310번 알림을 삭제했어요."
+                """
+                        🗑️ *알림을 삭제했어요*
+
+                        • 정류장: 텔레칩스
+                        • 버스: 310번"""
         );
 
         JsonNode root = OBJECT_MAPPER.readTree(json);
@@ -55,7 +61,11 @@ class SlackBlockKitBuilderTest {
         assertEquals("ephemeral", root.get("response_type").asText());
         assertTrue(root.get("replace_original").asBoolean());
         assertEquals("context", blocks.get(0).get("type").asText());
-        assertEquals("🗑️ 텔레칩스 310번 알림을 삭제했어요.",
+        assertEquals("""
+                        🗑️ *알림을 삭제했어요*
+
+                        • 정류장: 텔레칩스
+                        • 버스: 310번""",
                 blocks.get(0).get("elements").get(0).get("text").asText());
         assertEquals("divider", blocks.get(1).get("type").asText());
         assertEquals("header", blocks.get(2).get("type").asText());
@@ -65,21 +75,22 @@ class SlackBlockKitBuilderTest {
 
     @Test
     void alertListAfterDelete_when_no_alerts_left_shows_empty_notice() throws Exception {
-        String json = builder.alertListAfterDelete(List.of(), "🗑️ 텔레칩스 310번 알림을 삭제했어요.");
+        String json = builder.alertListAfterDelete(List.of(), "🗑️ *알림을 삭제했어요*");
 
-        assertTrue(json.contains("텔레칩스 310번 알림을 삭제했어요."));
-        assertTrue(json.contains("등록된 버스 알림이 없어요."));
+        assertTrue(json.contains("알림을 삭제했어요"));
+        assertTrue(json.contains("아직 등록된 버스 알림이 없어요."));
     }
 
     @Test
     void boardedAcknowledgement_shows_all_alerts_are_suppressed_today() {
         String json = builder.boardedAcknowledgement("""
-                오늘 하루 고생하셨어요 내일 봐요~
-                오늘 알람은 더이상 울리지 않습니다.""");
+                🌙 *오늘 하루 고생하셨어요. 내일 봐요~*
+
+                오늘 알림은 더 이상 울리지 않습니다.""");
 
         assertTrue(json.contains("\"replace_original\":true"));
-        assertTrue(json.contains("오늘 하루 고생하셨어요 내일 봐요~"));
-        assertTrue(json.contains("오늘 알람은 더이상 울리지 않습니다."));
+        assertTrue(json.contains("오늘 하루 고생하셨어요. 내일 봐요~"));
+        assertTrue(json.contains("오늘 알림은 더 이상 울리지 않습니다."));
     }
 
     @Test
@@ -89,6 +100,7 @@ class SlackBlockKitBuilderTest {
         JsonNode root = OBJECT_MAPPER.readTree(json);
         assertEquals("ephemeral", root.get("response_type").asText());
         assertEquals("✅ 버스 알림을 등록했어요.", root.get("text").asText());
+        assertTrue(root.get("blocks").isArray());
     }
 
     @Test
@@ -128,6 +140,7 @@ class SlackBlockKitBuilderTest {
         ));
 
         assertTrue(json.contains("310번 버스 도착 정보"));
+        assertTrue(json.contains("• 정류장: 텔레칩스"));
         assertTrue(json.contains("4분 후"));
         assertTrue(json.contains("13분 후"));
     }

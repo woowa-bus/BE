@@ -144,6 +144,24 @@ class BusAlertTest {
     }
 
     @Test
+    void resetNotification_allows_alert_again_after_boarded_today() {
+        BusAlert alert = BusAlert.create(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        );
+        LocalDateTime now = LocalDateTime.of(2026, 5, 22, 18, 1);
+        alert.markBoardedToday(now);
+
+        alert.resetNotification(now.plusMinutes(1));
+
+        assertTrue(alert.canSendNotification(LocalDateTime.of(2026, 5, 22, 18, 3), 3, 10));
+    }
+
+    @Test
     void canSendNotification_handles_no_arrival_information() {
         BusAlert alert = BusAlert.create(
                 "U123",
