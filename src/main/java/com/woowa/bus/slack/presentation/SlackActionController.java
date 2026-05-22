@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.woowa.bus.alert.application.BusAlertService;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
+import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,9 +20,11 @@ public class SlackActionController {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final BusAlertService busAlertService;
+    private final SlackBlockKitBuilder slackBlockKitBuilder;
 
-    public SlackActionController(BusAlertService busAlertService) {
+    public SlackActionController(BusAlertService busAlertService, SlackBlockKitBuilder slackBlockKitBuilder) {
         this.busAlertService = busAlertService;
+        this.slackBlockKitBuilder = slackBlockKitBuilder;
     }
 
     @PostMapping("/slack/actions")
@@ -31,34 +35,44 @@ public class SlackActionController {
             String userId = root.path("user").path("id").asText();
             JsonNode actions = root.path("actions");
             if (!actions.isArray()) {
-                return ResponseEntity.ok("");
+                return empty();
             }
             for (JsonNode action : actions) {
-                handleAction(userId, action);
+                String body = handleAction(userId, action);
+                if (body != null) {
+                    return ResponseEntity.ok()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(body);
+                }
             }
-            return ResponseEntity.ok("");
+            return empty();
         } catch (RuntimeException exception) {
             log.error("Slack action handling failed.", exception);
-            return ResponseEntity.ok("");
+            return empty();
         } catch (Exception exception) {
             log.error("Slack action payload parse failed.", exception);
-            return ResponseEntity.ok("");
+            return empty();
         }
     }
 
-    private void handleAction(String userId, JsonNode action) {
+    private String handleAction(String userId, JsonNode action) {
         String actionId = action.path("action_id").asText();
         if (!ACTION_ALERT_DELETE.equals(actionId)) {
             log.warn("Unknown slack action ignored. actionId={}", actionId);
-            return;
+            return null;
         }
         String value = action.path("value").asText();
         String[] parts = value.split("\\|", 2);
         if (parts.length != 2) {
             log.warn("Invalid alert_delete value. value={}", value);
-            return;
+            return null;
         }
         log.info("Slack alert_delete action. userId={}, stationName={}, busNumber={}", userId, parts[0], parts[1]);
         busAlertService.delete(new BusAlertDeleteCommand(userId, parts[0], parts[1]));
+        return slackBlockKitBuilder.alertListAfterDelete(busAlertService.findAllBySlackUserId(userId));
+    }
+
+    private ResponseEntity<String> empty() {
+        return ResponseEntity.ok("");
     }
 }

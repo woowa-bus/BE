@@ -59,20 +59,26 @@ public class SlackCommandController {
             String[] tokens = tokens(text);
             log.debug("Slack search tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length == 1) {
-                String response = busArrivalSearchService.searchStation(tokens[0]);
+                String body = slackBlockKitBuilder.stationArrival(busArrivalSearchService.resolveStation(tokens[0]));
                 log.info("Slack search station completed. userId={}, stationName={}", slackUserId, tokens[0]);
-                return ResponseEntity.ok(response);
+                return jsonOk(body);
             }
             if (tokens.length == 2) {
-                String response = busArrivalSearchService.searchBus(tokens[0], tokens[1]);
+                String body = slackBlockKitBuilder.busArrival(busArrivalSearchService.resolveBus(tokens[0], tokens[1]));
                 log.info("Slack search bus completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
-                return ResponseEntity.ok(response);
+                return jsonOk(body);
             }
             return ResponseEntity.ok(searchUsage());
         } catch (RuntimeException exception) {
             log.error("Slack search command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
         }
+    }
+
+    private ResponseEntity<String> jsonOk(String body) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body);
     }
 
     @PostMapping("/slack/commands/alert")

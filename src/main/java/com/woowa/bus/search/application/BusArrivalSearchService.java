@@ -81,6 +81,48 @@ public class BusArrivalSearchService {
         }
     }
 
+    public StationArrivalView resolveStation(String stationName) {
+        try {
+            log.info("Resolving station arrival view. stationName={}", stationName);
+            SupportedBusStation station = busRouteRegistry.station(stationName);
+            List<BusArrivalResult> arrivals = busArrivalClient.getArrivals(station.stationId()).stream()
+                    .sorted(Comparator.comparing(BusArrivalResult::predictTime1, Comparator.nullsLast(Integer::compareTo))
+                            .thenComparing(BusArrivalResult::busNumber))
+                    .toList();
+            return StationArrivalView.success(station.name(), arrivals);
+        } catch (BusRouteException exception) {
+            log.error("Station lookup failed. stationName={}", stationName, exception);
+            return StationArrivalView.error(exception.getMessage());
+        } catch (BusArrivalException exception) {
+            log.warn("Station arrival lookup failed. stationName={}", stationName, exception);
+            return StationArrivalView.error(BusMessageFormatter.busApiFailure());
+        } catch (RuntimeException exception) {
+            log.error("Station arrival lookup failed unexpectedly. stationName={}", stationName, exception);
+            return StationArrivalView.error(BusMessageFormatter.busApiFailure());
+        }
+    }
+
+    public BusArrivalView resolveBus(String stationName, String busNumber) {
+        try {
+            log.info("Resolving bus arrival view. stationName={}, busNumber={}", stationName, busNumber);
+            SupportedBusStation station = busRouteRegistry.station(stationName);
+            BusArrivalResult arrival = findArrival(station.stationId(), busNumber);
+            if (arrival == null) {
+                return BusArrivalView.notFound(station.name(), busNumber);
+            }
+            return BusArrivalView.found(station.name(), busNumber, arrival);
+        } catch (BusRouteException exception) {
+            log.error("Bus search route lookup failed. stationName={}, busNumber={}", stationName, busNumber, exception);
+            return BusArrivalView.error(exception.getMessage());
+        } catch (BusArrivalException exception) {
+            log.warn("Bus arrival lookup failed. stationName={}, busNumber={}", stationName, busNumber, exception);
+            return BusArrivalView.error(BusMessageFormatter.busApiFailure());
+        } catch (RuntimeException exception) {
+            log.error("Bus arrival lookup failed unexpectedly. stationName={}, busNumber={}", stationName, busNumber, exception);
+            return BusArrivalView.error(BusMessageFormatter.busApiFailure());
+        }
+    }
+
     private BusArrivalResult findArrival(String stationId, String busNumber) {
         log.debug("Finding arrival by bus number. stationId={}, busNumber={}", stationId, busNumber);
         return busArrivalClient.getArrivals(stationId)

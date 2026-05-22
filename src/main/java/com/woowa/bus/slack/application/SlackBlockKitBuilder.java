@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
+import com.woowa.bus.arrival.domain.BusArrivalResult;
+import com.woowa.bus.search.application.BusArrivalView;
+import com.woowa.bus.search.application.StationArrivalView;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -15,16 +18,127 @@ public class SlackBlockKitBuilder {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public String alertList(List<BusAlertResponse> alerts) {
+        return alertListResponse(alerts, "🔔 등록된 버스 알림", false);
+    }
+
+    public String alertListAfterDelete(List<BusAlertResponse> alerts) {
+        return alertListResponse(alerts, "🗑️ 삭제되었습니다.", true);
+    }
+
+    private String alertListResponse(List<BusAlertResponse> alerts, String headerText, boolean replaceOriginal) {
         ObjectNode root = OBJECT_MAPPER.createObjectNode();
-        root.put("response_type", "in_channel");
+        root.put("response_type", "ephemeral");
+        if (replaceOriginal) {
+            root.put("replace_original", true);
+        }
 
         ArrayNode blocks = root.putArray("blocks");
-        blocks.add(header("🔔 등록된 버스 알림"));
-        for (BusAlertResponse alert : alerts) {
-            blocks.add(alertSection(alert));
+        blocks.add(header(headerText));
+        if (alerts.isEmpty()) {
+            blocks.add(context("등록된 버스 알림이 없어요."));
+        } else {
+            for (BusAlertResponse alert : alerts) {
+                blocks.add(alertSection(alert));
+            }
         }
 
         return root.toString();
+    }
+
+    private ObjectNode context(String text) {
+        ObjectNode context = OBJECT_MAPPER.createObjectNode();
+        context.put("type", "context");
+        ArrayNode elements = context.putArray("elements");
+        ObjectNode element = elements.addObject();
+        element.put("type", "mrkdwn");
+        element.put("text", text);
+        return context;
+    }
+
+    public String stationArrival(StationArrivalView view) {
+        if (view.isError()) {
+            return errorResponse(view.errorMessage());
+        }
+        ObjectNode root = OBJECT_MAPPER.createObjectNode();
+        root.put("response_type", "ephemeral");
+
+        ArrayNode blocks = root.putArray("blocks");
+        blocks.add(header("🚌 %s 정류장 도착 정보".formatted(view.stationName())));
+        if (view.arrivals().isEmpty()) {
+            blocks.add(context("등록된 버스 정보가 없어요."));
+        } else {
+            for (BusArrivalResult arrival : view.arrivals()) {
+                blocks.add(arrivalSection(arrival));
+            }
+        }
+
+        return root.toString();
+    }
+
+    public String busArrival(BusArrivalView view) {
+        if (view.isError()) {
+            return errorResponse(view.errorMessage());
+        }
+        ObjectNode root = OBJECT_MAPPER.createObjectNode();
+        root.put("response_type", "ephemeral");
+
+        ArrayNode blocks = root.putArray("blocks");
+        blocks.add(header("🚌 %s번 버스 도착 정보".formatted(view.busNumber())));
+
+        if (!view.hasArrival()) {
+            blocks.add(context("현재 도착 예정 정보가 없어요.\n정류장: %s / 버스: %s번"
+                    .formatted(view.stationName(), view.busNumber())));
+        } else {
+            ObjectNode section = blocks.addObject();
+            section.put("type", "section");
+            ObjectNode text = section.putObject("text");
+            text.put("type", "mrkdwn");
+            text.put("text", "*정류장:* %s\n*첫 번째 버스:* %s\n*두 번째 버스:* %s".formatted(
+                    view.stationName(),
+                    arrivalText(view.arrival().predictTime1()),
+                    arrivalText(view.arrival().predictTime2())
+            ));
+        }
+
+        return root.toString();
+    }
+
+    private String errorResponse(String message) {
+        ObjectNode root = OBJECT_MAPPER.createObjectNode();
+        root.put("response_type", "ephemeral");
+        ArrayNode blocks = root.putArray("blocks");
+        ObjectNode section = blocks.addObject();
+        section.put("type", "section");
+        ObjectNode text = section.putObject("text");
+        text.put("type", "mrkdwn");
+        text.put("text", message);
+        return root.toString();
+    }
+
+    private ObjectNode arrivalSection(BusArrivalResult arrival) {
+        ObjectNode section = OBJECT_MAPPER.createObjectNode();
+        section.put("type", "section");
+        ObjectNode text = section.putObject("text");
+        text.put("type", "mrkdwn");
+        if (!arrival.hasArrival()) {
+            text.put("text", "*%s번*\n현재 도착 예정 정보가 없어요.".formatted(arrival.busNumber()));
+        } else if (arrival.predictTime2() == null) {
+            text.put("text", "*%s번*\n%s".formatted(arrival.busNumber(), arrivalText(arrival.predictTime1())));
+        } else {
+            text.put("text", "*%s번*\n%s / 다음 %s".formatted(
+                    arrival.busNumber(),
+                    arrivalText(arrival.predictTime1()),
+                    arrivalText(arrival.predictTime2())
+            ));
+        }
+        return section;
+    }
+
+    private String arrivalText(Integer predictTime) {
+        if (predictTime == null) {
+            return "정보 없음";
+        }
+        return "%d분 후".formatted(predictTime);
     }
 
     private ObjectNode header(String text) {
