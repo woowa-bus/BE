@@ -11,6 +11,7 @@ import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import com.woowa.bus.route.domain.SupportedBusRoute;
 import com.woowa.bus.route.domain.SupportedBusStation;
+import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import com.woowa.bus.slack.application.SlackMessageSender;
 import java.time.Clock;
 import java.time.Instant;
@@ -36,6 +37,7 @@ class BusAlertSchedulerTest {
                 registry(),
                 new FakeBusArrivalClient(),
                 slackMessageSender,
+                new SlackBlockKitBuilder(),
                 Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
                 10
         );
@@ -56,6 +58,7 @@ class BusAlertSchedulerTest {
                 registry(),
                 new FakeBusArrivalClient(),
                 new FakeSlackMessageSender(),
+                new SlackBlockKitBuilder(),
                 Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
                 10
         );
@@ -85,6 +88,7 @@ class BusAlertSchedulerTest {
                 registry(),
                 new FakeBusArrivalClient(),
                 slackMessageSender,
+                new SlackBlockKitBuilder(),
                 Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
                 10
         );
@@ -109,6 +113,7 @@ class BusAlertSchedulerTest {
                 registry(),
                 busArrivalClient,
                 slackMessageSender,
+                new SlackBlockKitBuilder(),
                 Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
                 10
         );
@@ -152,10 +157,14 @@ class BusAlertSchedulerTest {
     private static class FakeSlackMessageSender implements SlackMessageSender {
 
         private final List<String> messages = new ArrayList<>();
+        private final List<String> blocks = new ArrayList<>();
 
         @Override
-        public void sendDm(String slackUserId, String message) {
-            messages.add(message);
+        public void sendDm(String slackUserId, String text, String blocksJson) {
+            messages.add(text);
+            if (blocksJson != null) {
+                blocks.add(blocksJson);
+            }
         }
     }
 

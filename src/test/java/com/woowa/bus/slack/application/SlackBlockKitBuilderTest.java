@@ -7,6 +7,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
+import com.woowa.bus.arrival.domain.BusArrivalResult;
+import com.woowa.bus.search.application.BusArrivalView;
+import com.woowa.bus.search.application.StationArrivalView;
 import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -27,7 +30,7 @@ class SlackBlockKitBuilderTest {
         JsonNode root = OBJECT_MAPPER.readTree(json);
         JsonNode blocks = root.get("blocks");
 
-        assertEquals("in_channel", root.get("response_type").asText());
+        assertEquals("ephemeral", root.get("response_type").asText());
         assertTrue(blocks.isArray());
 
         long alertSections = blocks.findValues("accessory").stream()
@@ -38,6 +41,76 @@ class SlackBlockKitBuilderTest {
         JsonNode firstButton = blocks.findValues("accessory").get(0);
         assertEquals("alert_delete", firstButton.get("action_id").asText());
         assertEquals("텔레칩스|310", firstButton.get("value").asText());
+    }
+
+    @Test
+    void alertListAfterDelete_marks_replace_original_with_remaining() throws Exception {
+        String json = builder.alertListAfterDelete(List.of(
+                BusAlertResponse.from(BusAlert.create("U123", "벤처타운(북문)", "55", 3, LocalTime.of(8, 0), LocalTime.of(9, 30)))
+        ));
+
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+        assertEquals("ephemeral", root.get("response_type").asText());
+        assertTrue(root.get("replace_original").asBoolean());
+        assertTrue(json.contains("🗑️ 삭제되었습니다."));
+        assertTrue(json.contains("벤처타운(북문)"));
+    }
+
+    @Test
+    void alertListAfterDelete_when_no_alerts_left_shows_empty_notice() throws Exception {
+        String json = builder.alertListAfterDelete(List.of());
+
+        assertTrue(json.contains("🗑️ 삭제되었습니다."));
+        assertTrue(json.contains("등록된 버스 알림이 없어요."));
+    }
+
+    @Test
+    void stationArrival_renders_header_and_arrival_sections() throws Exception {
+        String json = builder.stationArrival(StationArrivalView.success("텔레칩스", List.of(
+                new BusArrivalResult("310", 4, 13),
+                new BusArrivalResult("55", 7, null)
+        )));
+
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+        assertEquals("ephemeral", root.get("response_type").asText());
+        assertTrue(json.contains("텔레칩스 정류장 도착 정보"));
+        assertTrue(json.contains("310번"));
+        assertTrue(json.contains("4분 후"));
+        assertTrue(json.contains("55번"));
+        assertTrue(json.contains("7분 후"));
+    }
+
+    @Test
+    void stationArrival_when_empty_shows_no_bus_notice() {
+        String json = builder.stationArrival(StationArrivalView.success("텔레칩스", List.of()));
+
+        assertTrue(json.contains("등록된 버스 정보가 없어요."));
+    }
+
+    @Test
+    void stationArrival_when_error_returns_error_card() {
+        String json = builder.stationArrival(StationArrivalView.error("지원하지 않는 정류장이에요."));
+
+        assertTrue(json.contains("지원하지 않는 정류장이에요."));
+    }
+
+    @Test
+    void busArrival_renders_arrival_details() {
+        String json = builder.busArrival(BusArrivalView.found(
+                "텔레칩스", "310", new BusArrivalResult("310", 4, 13)
+        ));
+
+        assertTrue(json.contains("310번 버스 도착 정보"));
+        assertTrue(json.contains("4분 후"));
+        assertTrue(json.contains("13분 후"));
+    }
+
+    @Test
+    void busArrival_when_not_found_shows_notice() {
+        String json = builder.busArrival(BusArrivalView.notFound("텔레칩스", "999"));
+
+        assertTrue(json.contains("현재 도착 예정 정보가 없어요."));
+        assertTrue(json.contains("999번"));
     }
 
     @Test

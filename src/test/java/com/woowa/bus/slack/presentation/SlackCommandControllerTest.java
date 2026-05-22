@@ -8,10 +8,18 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
+import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.search.application.BusArrivalSearchService;
+import com.woowa.bus.search.application.BusArrivalView;
+import com.woowa.bus.search.application.StationArrivalView;
+import com.woowa.bus.route.domain.BusRouteRegistry;
+import com.woowa.bus.route.domain.SupportedBusRoute;
+import com.woowa.bus.route.domain.SupportedBusStation;
 import com.woowa.bus.slack.application.BusCommandHelpService;
 import com.woowa.bus.slack.application.BusStatusService;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
+import com.woowa.bus.slack.application.SlackModalBuilder;
+import com.woowa.bus.slack.application.SlackViewsClient;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +33,9 @@ class SlackCommandControllerTest {
 
         String response = controller.search("U123", "텔레칩스").getBody();
 
-        assertEquals("station search: 텔레칩스", response);
+        assertTrue(response.contains("\"blocks\""));
+        assertTrue(response.contains("텔레칩스 정류장 도착 정보"));
+        assertTrue(response.contains("310번"));
     }
 
     @Test
@@ -34,23 +44,37 @@ class SlackCommandControllerTest {
 
         String response = controller.search("U123", "텔레칩스 310").getBody();
 
-        assertEquals("bus search: 텔레칩스 310", response);
+        assertTrue(response.contains("\"blocks\""));
+        assertTrue(response.contains("310번 버스 도착 정보"));
+        assertTrue(response.contains("4분 후"));
     }
 
     @Test
     void alert_success() {
         SlackCommandController controller = controller();
 
-        String response = controller.alert("U123", "텔레칩스 310 5 17:45 23:30").getBody();
+        String response = controller.alert("U123", "텔레칩스 310 5 17:45 23:30", "trigger123").getBody();
 
         assertEquals("alert saved: 텔레칩스 310 5 17:45 23:30", response);
+    }
+
+    @Test
+    void alert_opens_modal_when_no_args_and_trigger_id_given() {
+        FakeSlackViewsClient viewsClient = new FakeSlackViewsClient();
+        SlackCommandController controller = controllerWith(viewsClient);
+
+        String response = controller.alert("U123", "", "trigger999").getBody();
+
+        assertEquals("", response);
+        assertEquals("trigger999", viewsClient.lastTriggerId);
+        assertTrue(viewsClient.lastViewJson.contains("alert_create"));
     }
 
     @Test
     void alert_fail_with_invalid_time_format() {
         SlackCommandController controller = controller();
 
-        String response = controller.alert("U123", "텔레칩스 310 5 5:45 23:30").getBody();
+        String response = controller.alert("U123", "텔레칩스 310 5 5:45 23:30", "trigger123").getBody();
 
         assertEquals("""
                 시간은 HH:mm 형식으로 입력해 주세요.
@@ -75,7 +99,9 @@ class SlackCommandControllerTest {
                 new FakeBusAlertServiceWithAlert(),
                 new FakeBusCommandHelpService(),
                 new FakeBusStatusService(),
-                new SlackBlockKitBuilder()
+                new SlackBlockKitBuilder(),
+                new SlackModalBuilder(testRegistry()),
+                new FakeSlackViewsClient()
         );
 
         String response = controller.alertList("U123", "").getBody();
@@ -113,13 +139,39 @@ class SlackCommandControllerTest {
     }
 
     private SlackCommandController controller() {
+        return controllerWith(new FakeSlackViewsClient());
+    }
+
+    private SlackCommandController controllerWith(SlackViewsClient viewsClient) {
         return new SlackCommandController(
                 new FakeBusArrivalSearchService(),
                 new FakeBusAlertService(),
                 new FakeBusCommandHelpService(),
                 new FakeBusStatusService(),
-                new SlackBlockKitBuilder()
+                new SlackBlockKitBuilder(),
+                new SlackModalBuilder(testRegistry()),
+                viewsClient
         );
+    }
+
+    private BusRouteRegistry testRegistry() {
+        return BusRouteRegistry.of(List.of(
+                SupportedBusStation.of("텔레칩스", "200000001", List.of(
+                        SupportedBusRoute.of("310", "234000001", "12")
+                ))
+        ));
+    }
+
+    private static class FakeSlackViewsClient implements SlackViewsClient {
+
+        private String lastTriggerId;
+        private String lastViewJson;
+
+        @Override
+        public void open(String triggerId, String viewJson) {
+            this.lastTriggerId = triggerId;
+            this.lastViewJson = viewJson;
+        }
     }
 
     private static class FakeBusArrivalSearchService extends BusArrivalSearchService {
@@ -129,13 +181,15 @@ class SlackCommandControllerTest {
         }
 
         @Override
-        public String searchStation(String stationName) {
-            return "station search: " + stationName;
+        public StationArrivalView resolveStation(String stationName) {
+            return StationArrivalView.success(stationName, List.of(
+                    new BusArrivalResult("310", 4, 13)
+            ));
         }
 
         @Override
-        public String searchBus(String stationName, String busNumber) {
-            return "bus search: " + stationName + " " + busNumber;
+        public BusArrivalView resolveBus(String stationName, String busNumber) {
+            return BusArrivalView.found(stationName, busNumber, new BusArrivalResult(busNumber, 4, 13));
         }
     }
 
@@ -166,7 +220,7 @@ class SlackCommandControllerTest {
     private static class FakeBusAlertServiceWithAlert extends BusAlertService {
 
         FakeBusAlertServiceWithAlert() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override
@@ -182,7 +236,7 @@ class SlackCommandControllerTest {
     private static class FakeBusAlertService extends BusAlertService {
 
         FakeBusAlertService() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override

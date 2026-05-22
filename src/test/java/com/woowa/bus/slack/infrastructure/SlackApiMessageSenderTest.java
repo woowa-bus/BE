@@ -44,10 +44,23 @@ class SlackApiMessageSenderTest {
                 "http://localhost:%d/chat.postMessage".formatted(server.getAddress().getPort())
         );
 
-        sender.sendDm("U123", "hello");
+        sender.sendDm("U123", "hello", null);
 
         assertTrue(authorization.contains("Bearer test-slack-token"));
         assertTrue(requestBody.contains("\"channel\":\"U123\""));
         assertTrue(requestBody.contains("\"text\":\"hello\""));
+    }
+
+    @Test
+    void sendDm_includes_blocks_when_provided() {
+        SlackApiMessageSender sender = new SlackApiMessageSender(
+                "test-slack-token",
+                "http://localhost:%d/chat.postMessage".formatted(server.getAddress().getPort())
+        );
+
+        sender.sendDm("U123", "fallback", "[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"hi\"}}]");
+
+        assertTrue(requestBody.contains("\"blocks\":["));
+        assertTrue(requestBody.contains("\"text\":\"hi\""));
     }
 }

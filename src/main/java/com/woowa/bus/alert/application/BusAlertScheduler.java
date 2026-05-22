@@ -10,6 +10,7 @@ import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.route.domain.BusRouteException;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import com.woowa.bus.route.domain.SupportedBusStation;
+import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import com.woowa.bus.slack.application.SlackMessageSender;
 import com.woowa.bus.message.BusMessageFormatter;
 import java.time.Clock;
@@ -32,6 +33,7 @@ public class BusAlertScheduler {
     private final BusRouteRegistry busRouteRegistry;
     private final BusArrivalClient busArrivalClient;
     private final SlackMessageSender slackMessageSender;
+    private final SlackBlockKitBuilder slackBlockKitBuilder;
     private final Clock clock;
     private final int cooldownMinutes;
 
@@ -41,6 +43,7 @@ public class BusAlertScheduler {
             BusRouteRegistry busRouteRegistry,
             BusArrivalClient busArrivalClient,
             SlackMessageSender slackMessageSender,
+            SlackBlockKitBuilder slackBlockKitBuilder,
             Clock clock,
             @Value("${app.alert.cooldown-minutes:10}") int cooldownMinutes
     ) {
@@ -49,6 +52,7 @@ public class BusAlertScheduler {
         this.busRouteRegistry = busRouteRegistry;
         this.busArrivalClient = busArrivalClient;
         this.slackMessageSender = slackMessageSender;
+        this.slackBlockKitBuilder = slackBlockKitBuilder;
         this.clock = clock;
         this.cooldownMinutes = cooldownMinutes;
     }
@@ -90,7 +94,11 @@ public class BusAlertScheduler {
             }
             log.info("Sending bus alert DM. alertId={}, userId={}, stationName={}, busNumber={}, predictTime1={}",
                     alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), arrival.predictTime1());
-            slackMessageSender.sendDm(alert.slackUserId(), BusMessageFormatter.alertNotification(alert, arrival));
+            slackMessageSender.sendDm(
+                    alert.slackUserId(),
+                    BusMessageFormatter.alertNotification(alert, arrival),
+                    slackBlockKitBuilder.alertNotificationBlocks(alert, arrival)
+            );
             alert.markNotified(now);
             busAlertRepository.save(alert);
             busAlertHistoryRepository.save(BusAlertHistory.record(

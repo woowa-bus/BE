@@ -3,7 +3,7 @@ package com.woowa.bus.slack.infrastructure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.woowa.bus.slack.application.SlackMessageSender;
+import com.woowa.bus.slack.application.SlackViewsClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -12,48 +12,45 @@ import org.springframework.web.client.RestClient;
 
 @Component
 @Slf4j
-public class SlackApiMessageSender implements SlackMessageSender {
+public class SlackApiViewsClient implements SlackViewsClient {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final String botToken;
-    private final String postMessageUrl;
+    private final String viewsOpenUrl;
     private final RestClient restClient;
 
-    public SlackApiMessageSender(
+    public SlackApiViewsClient(
             @Value("${slack.bot-token:}") String botToken,
-            @Value("${slack.post-message-url:https://slack.com/api/chat.postMessage}") String postMessageUrl
+            @Value("${slack.views-open-url:https://slack.com/api/views.open}") String viewsOpenUrl
     ) {
         this.botToken = botToken;
-        this.postMessageUrl = postMessageUrl;
+        this.viewsOpenUrl = viewsOpenUrl;
         this.restClient = RestClient.create();
     }
 
     @Override
-    public void sendDm(String slackUserId, String text, String blocksJson) {
+    public void open(String triggerId, String viewJson) {
         try {
-            log.debug("Sending Slack DM. userId={}, url={}, textLength={}, hasBlocks={}",
-                    slackUserId, postMessageUrl, text == null ? 0 : text.length(), blocksJson != null);
+            JsonNode view = OBJECT_MAPPER.readTree(viewJson);
             ObjectNode body = OBJECT_MAPPER.createObjectNode();
-            body.put("channel", slackUserId);
-            body.put("text", text);
-            if (blocksJson != null && !blocksJson.isBlank()) {
-                JsonNode blocks = OBJECT_MAPPER.readTree(blocksJson);
-                body.set("blocks", blocks);
-            }
+            body.put("trigger_id", triggerId);
+            body.set("view", view);
+
+            log.debug("Opening Slack view. triggerId={}, url={}", triggerId, viewsOpenUrl);
             restClient.post()
-                    .uri(postMessageUrl)
+                    .uri(viewsOpenUrl)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + botToken)
                     .body(body.toString())
                     .retrieve()
                     .toBodilessEntity();
-            log.info("Slack DM sent. userId={}", slackUserId);
+            log.info("Slack view opened. triggerId={}", triggerId);
         } catch (RuntimeException exception) {
-            log.warn("Slack DM send failed. userId={}", slackUserId, exception);
+            log.warn("Slack view open failed. triggerId={}", triggerId, exception);
             throw exception;
         } catch (Exception exception) {
-            log.error("Slack DM blocks parse failed. userId={}", slackUserId, exception);
+            log.error("Slack view payload parse failed.", exception);
         }
     }
 }

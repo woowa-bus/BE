@@ -9,6 +9,8 @@ import com.woowa.bus.message.BusMessageFormatter;
 import com.woowa.bus.slack.application.BusCommandHelpService;
 import com.woowa.bus.slack.application.BusStatusService;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
+import com.woowa.bus.slack.application.SlackModalBuilder;
+import com.woowa.bus.slack.application.SlackViewsClient;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -34,19 +36,25 @@ public class SlackCommandController {
     private final BusCommandHelpService busCommandHelpService;
     private final BusStatusService busStatusService;
     private final SlackBlockKitBuilder slackBlockKitBuilder;
+    private final SlackModalBuilder slackModalBuilder;
+    private final SlackViewsClient slackViewsClient;
 
     public SlackCommandController(
             BusArrivalSearchService busArrivalSearchService,
             BusAlertService busAlertService,
             BusCommandHelpService busCommandHelpService,
             BusStatusService busStatusService,
-            SlackBlockKitBuilder slackBlockKitBuilder
+            SlackBlockKitBuilder slackBlockKitBuilder,
+            SlackModalBuilder slackModalBuilder,
+            SlackViewsClient slackViewsClient
     ) {
         this.busArrivalSearchService = busArrivalSearchService;
         this.busAlertService = busAlertService;
         this.busCommandHelpService = busCommandHelpService;
         this.busStatusService = busStatusService;
         this.slackBlockKitBuilder = slackBlockKitBuilder;
+        this.slackModalBuilder = slackModalBuilder;
+        this.slackViewsClient = slackViewsClient;
     }
 
     @PostMapping("/slack/commands/search")
@@ -59,14 +67,14 @@ public class SlackCommandController {
             String[] tokens = tokens(text);
             log.debug("Slack search tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length == 1) {
-                String response = busArrivalSearchService.searchStation(tokens[0]);
+                String body = slackBlockKitBuilder.stationArrival(busArrivalSearchService.resolveStation(tokens[0]));
                 log.info("Slack search station completed. userId={}, stationName={}", slackUserId, tokens[0]);
-                return ResponseEntity.ok(response);
+                return jsonOk(body);
             }
             if (tokens.length == 2) {
-                String response = busArrivalSearchService.searchBus(tokens[0], tokens[1]);
+                String body = slackBlockKitBuilder.busArrival(busArrivalSearchService.resolveBus(tokens[0], tokens[1]));
                 log.info("Slack search bus completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
-                return ResponseEntity.ok(response);
+                return jsonOk(body);
             }
             return ResponseEntity.ok(searchUsage());
         } catch (RuntimeException exception) {
@@ -75,15 +83,27 @@ public class SlackCommandController {
         }
     }
 
+    private ResponseEntity<String> jsonOk(String body) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body);
+    }
+
     @PostMapping("/slack/commands/alert")
     public ResponseEntity<String> alert(
             @RequestParam("user_id") String slackUserId,
-            @RequestParam(value = "text", defaultValue = "") String text
+            @RequestParam(value = "text", defaultValue = "") String text,
+            @RequestParam(value = "trigger_id", defaultValue = "") String triggerId
     ) {
         log.info("Slack alert command received. userId={}, rawText={}", slackUserId, text);
         try {
             String[] tokens = tokens(text);
             log.debug("Slack alert tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
+            if (tokens.length == 0 && !triggerId.isBlank()) {
+                slackViewsClient.open(triggerId, slackModalBuilder.alertCreateModal());
+                log.info("Slack alert modal opened. userId={}", slackUserId);
+                return ResponseEntity.ok("");
+            }
             if (tokens.length != 5) {
                 return ResponseEntity.ok(alertUsage());
             }
