@@ -72,6 +72,16 @@ class SlackCommandControllerTest {
     }
 
     @Test
+    void alert_reset_success() {
+        SlackCommandController controller = controller();
+
+        String response = controller.alert("U123", "초기화", "trigger123").getBody();
+
+        assertTrue(response.contains("\"response_type\":\"ephemeral\""));
+        assertTrue(response.contains("alert reset: U123"));
+    }
+
+    @Test
     void alert_fail_with_invalid_time_format() {
         SlackCommandController controller = controller();
 
@@ -259,6 +269,11 @@ class SlackCommandControllerTest {
         @Override
         public String delete(BusAlertDeleteCommand command) {
             return "alert deleted: " + command.stationName() + " " + command.busNumber();
+        }
+
+        @Override
+        public String resetNotifications(String slackUserId) {
+            return "alert reset: " + slackUserId;
         }
     }
 }

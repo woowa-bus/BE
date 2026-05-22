@@ -176,6 +176,40 @@ class BusAlertServiceTest {
                 .canSendNotification(LocalDateTime.of(2026, 5, 22, 22, 0), 3, 10));
     }
 
+    @Test
+    void resetNotifications_success_allows_all_user_alerts_again_today() {
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "55",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+        service.markBoarded("U123", "텔레칩스", "310");
+
+        String message = service.resetNotifications("U123");
+
+        assertEquals("🔔 오늘 알림을 다시 울리도록 초기화했어요.", message);
+        assertTrue(repository.findAllBySlackUserId("U123").stream()
+                .allMatch(alert -> alert.canSendNotification(LocalDateTime.of(2026, 5, 22, 18, 3), 3, 10)));
+    }
+
+    @Test
+    void resetNotifications_when_empty_returns_notice() {
+        String message = service.resetNotifications("U123");
+
+        assertEquals("초기화할 버스 알림이 없어요.", message);
+    }
+
     private BusRouteRegistry registry() {
         return BusRouteRegistry.of(List.of(
                 SupportedBusStation.of("텔레칩스", "200000001", List.of(
