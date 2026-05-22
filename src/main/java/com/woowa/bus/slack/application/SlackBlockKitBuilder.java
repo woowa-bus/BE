@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
+import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.search.application.BusArrivalView;
 import com.woowa.bus.search.application.StationArrivalView;
@@ -53,6 +54,51 @@ public class SlackBlockKitBuilder {
         element.put("type", "mrkdwn");
         element.put("text", text);
         return context;
+    }
+
+    public String alertNotificationBlocks(BusAlert alert, BusArrivalResult arrival) {
+        ArrayNode blocks = OBJECT_MAPPER.createArrayNode();
+        blocks.add(header("🔔 %s번 버스가 곧 도착해요!".formatted(alert.busNumber())));
+
+        ObjectNode section = blocks.addObject();
+        section.put("type", "section");
+        ObjectNode text = section.putObject("text");
+        text.put("type", "mrkdwn");
+        text.put("text", "*정류장:* %s\n*예상 도착:* %s\n*다음 버스:* %s\n*알림 기준:* %d분 전\n*알림 시간:* %s~%s".formatted(
+                alert.stationName(),
+                arrivalText(arrival.predictTime1()),
+                arrivalText(arrival.predictTime2()),
+                alert.notifyBeforeMinutes(),
+                alert.startTime().format(TIME_FORMATTER),
+                alert.endTime().format(TIME_FORMATTER)
+        ));
+
+        ObjectNode actions = blocks.addObject();
+        actions.put("type", "actions");
+        ArrayNode elements = actions.putArray("elements");
+        ObjectNode button = elements.addObject();
+        button.put("type", "button");
+        ObjectNode buttonText = button.putObject("text");
+        buttonText.put("type", "plain_text");
+        buttonText.put("text", "🚌 탑승 완료");
+        buttonText.put("emoji", true);
+        button.put("action_id", "alert_boarded");
+        button.put("value", "%s|%s".formatted(alert.stationName(), alert.busNumber()));
+        button.put("style", "primary");
+
+        return blocks.toString();
+    }
+
+    public String boardedAcknowledgement(String message) {
+        ObjectNode root = OBJECT_MAPPER.createObjectNode();
+        root.put("replace_original", true);
+        ArrayNode blocks = root.putArray("blocks");
+        ObjectNode section = blocks.addObject();
+        section.put("type", "section");
+        ObjectNode text = section.putObject("text");
+        text.put("type", "mrkdwn");
+        text.put("text", message);
+        return root.toString();
     }
 
     public String stationArrival(StationArrivalView view) {

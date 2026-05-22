@@ -116,6 +116,11 @@ public class BusAlert {
         this.updatedAt = notifiedAt;
     }
 
+    public void markBoardedToday(LocalDateTime now) {
+        this.lastNotifiedAt = LocalDateTime.of(now.toLocalDate(), LocalTime.MAX);
+        this.updatedAt = now;
+    }
+
     public boolean hasSlackUserId(String slackUserId) {
         return this.slackUserId.equals(slackUserId);
     }

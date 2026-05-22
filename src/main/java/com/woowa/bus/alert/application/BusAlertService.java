@@ -8,6 +8,8 @@ import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import com.woowa.bus.route.domain.SupportedBusStation;
 import com.woowa.bus.message.BusMessageFormatter;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,10 +22,12 @@ public class BusAlertService {
 
     private final BusAlertRepository busAlertRepository;
     private final BusRouteRegistry busRouteRegistry;
+    private final Clock clock;
 
-    public BusAlertService(BusAlertRepository busAlertRepository, BusRouteRegistry busRouteRegistry) {
+    public BusAlertService(BusAlertRepository busAlertRepository, BusRouteRegistry busRouteRegistry, Clock clock) {
         this.busAlertRepository = busAlertRepository;
         this.busRouteRegistry = busRouteRegistry;
+        this.clock = clock;
     }
 
     public String save(BusAlertCreateCommand command) {
@@ -56,6 +60,19 @@ public class BusAlertService {
                 .stream()
                 .map(BusAlertResponse::from)
                 .toList();
+    }
+
+    public String markBoarded(String slackUserId, String stationName, String busNumber) {
+        log.info("Marking bus alert boarded. userId={}, stationName={}, busNumber={}", slackUserId, stationName, busNumber);
+        SupportedBusStation station = busRouteRegistry.station(stationName);
+        return busAlertRepository.findByUserStationAndBus(slackUserId, station.name(), busNumber)
+                .map(alert -> {
+                    alert.markBoardedToday(LocalDateTime.now(clock));
+                    busAlertRepository.save(alert);
+                    return "🚌 좋은 하루 보내세요! 오늘은 더 이상 %s %s번 알림을 보내지 않을게요."
+                            .formatted(alert.stationName(), alert.busNumber());
+                })
+                .orElse("탑승 처리할 알림을 찾지 못했어요.");
     }
 
     public String delete(BusAlertDeleteCommand command) {
