@@ -2,6 +2,7 @@ package com.woowa.bus.arrival.infrastructure;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.woowa.bus.arrival.application.BusArrivalMetrics;
 import com.woowa.bus.arrival.domain.BusArrivalClient;
 import com.woowa.bus.arrival.domain.BusArrivalException;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
@@ -23,12 +24,14 @@ public class GbisBusArrivalClient implements BusArrivalClient {
 
     private final String serviceKey;
     private final String requestUrl;
+    private final BusArrivalMetrics busArrivalMetrics;
     private final RestClient restClient;
 
     public GbisBusArrivalClient(
             @Value("${gbis.service-key:}") String serviceKey,
             @Value("${gbis.endpoint-url:https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2}")
-            String requestUrl
+            String requestUrl,
+            BusArrivalMetrics busArrivalMetrics
     ) {
         this.serviceKey = serviceKey;
         this.requestUrl = requestUrl.endsWith("getBusArrivalListv2")
@@ -36,11 +39,13 @@ public class GbisBusArrivalClient implements BusArrivalClient {
                 : requestUrl.endsWith("/")
                 ? requestUrl + "getBusArrivalListv2"
                 : requestUrl + "/getBusArrivalListv2";
+        this.busArrivalMetrics = busArrivalMetrics;
         this.restClient = RestClient.create();
     }
 
     @Override
     public List<BusArrivalResult> getArrivals(String stationId) {
+        long startMillis = System.currentTimeMillis();
         try {
             log.debug("Requesting GBIS arrivals. stationId={}, url={}", stationId, requestUrl);
             String response = restClient.get()
@@ -48,9 +53,12 @@ public class GbisBusArrivalClient implements BusArrivalClient {
                     .retrieve()
                     .body(String.class);
             log.debug("GBIS arrival response received. stationId={}, responseLength={}", stationId, response == null ? 0 : response.length());
-            return parse(response);
+            List<BusArrivalResult> arrivals = parse(response);
+            busArrivalMetrics.recordSuccess(System.currentTimeMillis() - startMillis);
+            return arrivals;
         } catch (RuntimeException exception) {
             log.warn("GBIS arrival request failed. stationId={}", stationId, exception);
+            busArrivalMetrics.recordFailure(exception.getMessage());
             throw new BusArrivalException("버스 정보를 가져오지 못했어요.", exception);
         }
     }
