@@ -19,14 +19,14 @@ public class SlackBlockKitBuilder {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public String alertList(List<BusAlertResponse> alerts) {
-        return alertListResponse(alerts, "🔔 등록된 버스 알림", false);
+        return alertListResponse(alerts, false, false);
     }
 
     public String alertListAfterDelete(List<BusAlertResponse> alerts) {
-        return alertListResponse(alerts, "🗑️ 삭제되었습니다.", true);
+        return alertListResponse(alerts, true, true);
     }
 
-    private String alertListResponse(List<BusAlertResponse> alerts, String headerText, boolean replaceOriginal) {
+    private String alertListResponse(List<BusAlertResponse> alerts, boolean replaceOriginal, boolean deleted) {
         ObjectNode root = OBJECT_MAPPER.createObjectNode();
         root.put("response_type", "ephemeral");
         if (replaceOriginal) {
@@ -34,7 +34,10 @@ public class SlackBlockKitBuilder {
         }
 
         ArrayNode blocks = root.putArray("blocks");
-        blocks.add(header(headerText));
+        blocks.add(header("🔔 등록된 버스 알림"));
+        if (deleted) {
+            blocks.add(context("삭제되었습니다."));
+        }
         if (alerts.isEmpty()) {
             blocks.add(context("등록된 버스 알림이 없어요."));
         } else {

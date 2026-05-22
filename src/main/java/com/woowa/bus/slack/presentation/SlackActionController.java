@@ -7,6 +7,7 @@ import com.woowa.bus.alert.application.BusAlertService;
 import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
+import com.woowa.bus.slack.application.SlackMessageSender;
 import com.woowa.bus.slack.application.SlackModalBuilder;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -33,10 +34,16 @@ public class SlackActionController {
 
     private final BusAlertService busAlertService;
     private final SlackBlockKitBuilder slackBlockKitBuilder;
+    private final SlackMessageSender slackMessageSender;
 
-    public SlackActionController(BusAlertService busAlertService, SlackBlockKitBuilder slackBlockKitBuilder) {
+    public SlackActionController(
+            BusAlertService busAlertService,
+            SlackBlockKitBuilder slackBlockKitBuilder,
+            SlackMessageSender slackMessageSender
+    ) {
         this.busAlertService = busAlertService;
         this.slackBlockKitBuilder = slackBlockKitBuilder;
+        this.slackMessageSender = slackMessageSender;
     }
 
     @PostMapping("/slack/actions")
@@ -98,7 +105,8 @@ public class SlackActionController {
             int notifyBefore = Integer.parseInt(notifyBeforeText);
             LocalTime startTime = LocalTime.parse(startTimeText, TIME_FORMATTER);
             LocalTime endTime = LocalTime.parse(endTimeText, TIME_FORMATTER);
-            busAlertService.save(new BusAlertCreateCommand(userId, station, bus, notifyBefore, startTime, endTime));
+            String message = busAlertService.save(new BusAlertCreateCommand(userId, station, bus, notifyBefore, startTime, endTime));
+            sendAlertCreatedMessage(userId, message);
             log.info("Slack alert modal submission accepted. userId={}, station={}, bus={}", userId, station, bus);
             return empty();
         } catch (NumberFormatException exception) {
@@ -109,6 +117,14 @@ public class SlackActionController {
             log.warn("Slack alert modal submission rejected. userId={}, station={}, bus={}, reason={}",
                     userId, station, bus, exception.getMessage());
             return submissionError(SlackModalBuilder.BLOCK_BUS, exception.getMessage());
+        }
+    }
+
+    private void sendAlertCreatedMessage(String userId, String message) {
+        try {
+            slackMessageSender.sendDm(userId, message, null);
+        } catch (RuntimeException exception) {
+            log.warn("Slack alert modal success message send failed. userId={}", userId, exception);
         }
     }
 
