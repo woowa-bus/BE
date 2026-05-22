@@ -3,6 +3,8 @@ package com.woowa.bus.alert.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.woowa.bus.alert.domain.BusAlert;
+import com.woowa.bus.alert.domain.BusAlertHistory;
+import com.woowa.bus.alert.domain.BusAlertHistoryRepository;
 import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.arrival.domain.BusArrivalClient;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
@@ -26,8 +28,10 @@ class BusAlertSchedulerTest {
         FakeBusAlertRepository repository = new FakeBusAlertRepository();
         repository.save(BusAlert.create("U123", "텔레칩스", "310", 5, LocalTime.of(17, 45), LocalTime.of(23, 30)));
         FakeSlackMessageSender slackMessageSender = new FakeSlackMessageSender();
+        FakeBusAlertHistoryRepository historyRepository = new FakeBusAlertHistoryRepository();
         BusAlertScheduler scheduler = new BusAlertScheduler(
                 repository,
+                historyRepository,
                 registry(),
                 new FakeBusArrivalClient(),
                 slackMessageSender,
@@ -41,14 +45,42 @@ class BusAlertSchedulerTest {
     }
 
     @Test
+    void sendBusAlerts_records_history_after_sending() {
+        FakeBusAlertRepository repository = new FakeBusAlertRepository();
+        repository.save(BusAlert.create("U123", "텔레칩스", "310", 5, LocalTime.of(17, 45), LocalTime.of(23, 30)));
+        FakeBusAlertHistoryRepository historyRepository = new FakeBusAlertHistoryRepository();
+        BusAlertScheduler scheduler = new BusAlertScheduler(
+                repository,
+                historyRepository,
+                registry(),
+                new FakeBusArrivalClient(),
+                new FakeSlackMessageSender(),
+                Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
+                10
+        );
+
+        scheduler.sendBusAlerts();
+
+        assertEquals(1, historyRepository.histories.size());
+        BusAlertHistory history = historyRepository.histories.get(0);
+        assertEquals("U123", history.slackUserId());
+        assertEquals("텔레칩스", history.stationName());
+        assertEquals("310", history.busNumber());
+        assertEquals(4, history.predictTime1());
+        assertEquals(13, history.predictTime2());
+    }
+
+    @Test
     void sendBusAlerts_does_not_send_when_recently_notified() {
         FakeBusAlertRepository repository = new FakeBusAlertRepository();
         BusAlert alert = BusAlert.create("U123", "텔레칩스", "310", 5, LocalTime.of(17, 45), LocalTime.of(23, 30));
         alert.markNotified(Instant.parse("2026-05-22T08:55:00Z").atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime());
         repository.save(alert);
         FakeSlackMessageSender slackMessageSender = new FakeSlackMessageSender();
+        FakeBusAlertHistoryRepository historyRepository = new FakeBusAlertHistoryRepository();
         BusAlertScheduler scheduler = new BusAlertScheduler(
                 repository,
+                historyRepository,
                 registry(),
                 new FakeBusArrivalClient(),
                 slackMessageSender,
@@ -59,6 +91,7 @@ class BusAlertSchedulerTest {
         scheduler.sendBusAlerts();
 
         assertEquals(0, slackMessageSender.messages.size());
+        assertEquals(0, historyRepository.histories.size());
     }
 
     private BusRouteRegistry registry() {
@@ -84,6 +117,22 @@ class BusAlertSchedulerTest {
         @Override
         public void sendDm(String slackUserId, String message) {
             messages.add(message);
+        }
+    }
+
+    private static class FakeBusAlertHistoryRepository implements BusAlertHistoryRepository {
+
+        private final List<BusAlertHistory> histories = new ArrayList<>();
+
+        @Override
+        public BusAlertHistory save(BusAlertHistory history) {
+            histories.add(history);
+            return history;
+        }
+
+        @Override
+        public List<BusAlertHistory> findAll() {
+            return new ArrayList<>(histories);
         }
     }
 
