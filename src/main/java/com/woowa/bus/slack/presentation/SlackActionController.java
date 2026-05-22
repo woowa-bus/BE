@@ -153,8 +153,8 @@ public class SlackActionController {
         return switch (actionId) {
             case ACTION_ALERT_DELETE -> {
                 log.info("Slack alert_delete action. userId={}, stationName={}, busNumber={}", userId, parts[0], parts[1]);
-                busAlertService.delete(new BusAlertDeleteCommand(userId, parts[0], parts[1]));
-                yield slackBlockKitBuilder.alertListAfterDelete(busAlertService.findAllBySlackUserId(userId));
+                String deletedMessage = busAlertService.delete(new BusAlertDeleteCommand(userId, parts[0], parts[1]));
+                yield slackBlockKitBuilder.alertListAfterDelete(busAlertService.findAllBySlackUserId(userId), deletedMessage);
             }
             case ACTION_ALERT_BOARDED -> {
                 log.info("Slack alert_boarded action. userId={}, stationName={}, busNumber={}", userId, parts[0], parts[1]);

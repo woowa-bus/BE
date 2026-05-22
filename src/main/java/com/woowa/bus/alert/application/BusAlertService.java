@@ -67,10 +67,13 @@ public class BusAlertService {
         SupportedBusStation station = busRouteRegistry.station(stationName);
         return busAlertRepository.findByUserStationAndBus(slackUserId, station.name(), busNumber)
                 .map(alert -> {
-                    alert.markBoardedToday(LocalDateTime.now(clock));
-                    busAlertRepository.save(alert);
-                    return "🚌 좋은 하루 보내세요! 오늘은 더 이상 %s %s번 알림을 보내지 않을게요."
-                            .formatted(alert.stationName(), alert.busNumber());
+                    LocalDateTime now = LocalDateTime.now(clock);
+                    busAlertRepository.findAllBySlackUserId(slackUserId)
+                            .forEach(userAlert -> {
+                                userAlert.markBoardedToday(now);
+                                busAlertRepository.save(userAlert);
+                            });
+                    return "🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.";
                 })
                 .orElse("탑승 처리할 알림을 찾지 못했어요.");
     }

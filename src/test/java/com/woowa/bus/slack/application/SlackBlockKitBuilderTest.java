@@ -45,24 +45,42 @@ class SlackBlockKitBuilderTest {
 
     @Test
     void alertListAfterDelete_replaces_original_with_refreshed_alert_list() throws Exception {
-        String json = builder.alertListAfterDelete(List.of(
-                BusAlertResponse.from(BusAlert.create("U123", "벤처타운(북문)", "55", 3, LocalTime.of(8, 0), LocalTime.of(9, 30)))
-        ));
+        String json = builder.alertListAfterDelete(
+                List.of(BusAlertResponse.from(BusAlert.create("U123", "벤처타운(북문)", "55", 3, LocalTime.of(8, 0), LocalTime.of(9, 30)))),
+                "🗑️ 텔레칩스 310번 알림을 삭제했어요."
+        );
 
         JsonNode root = OBJECT_MAPPER.readTree(json);
         assertEquals("ephemeral", root.get("response_type").asText());
         assertTrue(root.get("replace_original").asBoolean());
         assertTrue(json.contains("🔔 등록된 버스 알림"));
-        assertTrue(json.contains("삭제되었습니다."));
+        assertTrue(json.contains("텔레칩스 310번 알림을 삭제했어요."));
         assertTrue(json.contains("벤처타운(북문)"));
     }
 
     @Test
     void alertListAfterDelete_when_no_alerts_left_shows_empty_notice() throws Exception {
-        String json = builder.alertListAfterDelete(List.of());
+        String json = builder.alertListAfterDelete(List.of(), "🗑️ 텔레칩스 310번 알림을 삭제했어요.");
 
-        assertTrue(json.contains("삭제되었습니다."));
+        assertTrue(json.contains("텔레칩스 310번 알림을 삭제했어요."));
         assertTrue(json.contains("등록된 버스 알림이 없어요."));
+    }
+
+    @Test
+    void boardedAcknowledgement_shows_all_alerts_are_suppressed_today() {
+        String json = builder.boardedAcknowledgement("🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.");
+
+        assertTrue(json.contains("\"replace_original\":true"));
+        assertTrue(json.contains("모든 버스 알림이 울리지 않습니다."));
+    }
+
+    @Test
+    void ephemeralText_returns_message_visible_only_to_request_user() throws Exception {
+        String json = builder.ephemeralText("✅ 버스 알림을 등록했어요.");
+
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+        assertEquals("ephemeral", root.get("response_type").asText());
+        assertEquals("✅ 버스 알림을 등록했어요.", root.get("text").asText());
     }
 
     @Test

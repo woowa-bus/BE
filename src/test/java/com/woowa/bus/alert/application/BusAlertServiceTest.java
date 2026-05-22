@@ -12,7 +12,10 @@ import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import com.woowa.bus.route.domain.SupportedBusRoute;
 import com.woowa.bus.route.domain.SupportedBusStation;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -20,11 +23,16 @@ import org.junit.jupiter.api.Test;
 
 class BusAlertServiceTest {
 
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            LocalDateTime.of(2026, 5, 22, 18, 1).atZone(ZoneId.systemDefault()).toInstant(),
+            ZoneId.systemDefault()
+    );
+
     private final FakeBusAlertRepository repository = new FakeBusAlertRepository();
     private final BusAlertService service = new BusAlertService(
             repository,
             registry(),
-            java.time.Clock.systemDefaultZone()
+            FIXED_CLOCK
     );
 
     @Test
@@ -123,6 +131,47 @@ class BusAlertServiceTest {
 
         assertEquals("🗑️ 텔레칩스 310번 알림을 삭제했어요.", message);
         assertFalse(repository.findByUserStationAndBus("U123", "텔레칩스", "310").isPresent());
+    }
+
+    @Test
+    void markBoarded_success_suppresses_all_user_alerts_today() {
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "55",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+        service.save(new BusAlertCreateCommand(
+                "U999",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+
+        String message = service.markBoarded("U123", "텔레칩스", "310");
+
+        assertEquals("🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.", message);
+        List<BusAlert> userAlerts = repository.findAllBySlackUserId("U123");
+        assertEquals(2, userAlerts.size());
+        assertTrue(userAlerts.stream()
+                .noneMatch(alert -> alert.canSendNotification(LocalDateTime.of(2026, 5, 22, 22, 0), 3, 10)));
+        assertTrue(userAlerts.stream()
+                .allMatch(alert -> alert.canSendNotification(LocalDateTime.of(2026, 5, 23, 18, 1), 3, 10)));
+        assertTrue(repository.findByUserStationAndBus("U999", "텔레칩스", "310")
+                .orElseThrow()
+                .canSendNotification(LocalDateTime.of(2026, 5, 22, 22, 0), 3, 10));
     }
 
     private BusRouteRegistry registry() {

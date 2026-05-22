@@ -45,6 +45,10 @@ class BusAlertSchedulerTest {
         scheduler.sendBusAlerts();
 
         assertEquals(1, slackMessageSender.messages.size());
+        assertEquals(1, slackMessageSender.blocks.size());
+        assertEquals(true, slackMessageSender.messages.get(0).contains("현재 시각: 18:01"));
+        assertEquals(true, slackMessageSender.blocks.get(0).contains("현재 시각"));
+        assertEquals(true, slackMessageSender.blocks.get(0).contains("18:01"));
     }
 
     @Test

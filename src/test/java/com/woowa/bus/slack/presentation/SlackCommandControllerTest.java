@@ -55,7 +55,8 @@ class SlackCommandControllerTest {
 
         String response = controller.alert("U123", "텔레칩스 310 5 17:45 23:30", "trigger123").getBody();
 
-        assertEquals("alert saved: 텔레칩스 310 5 17:45 23:30", response);
+        assertTrue(response.contains("\"response_type\":\"ephemeral\""));
+        assertTrue(response.contains("alert saved: 텔레칩스 310 5 17:45 23:30"));
     }
 
     @Test
