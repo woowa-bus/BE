@@ -46,7 +46,7 @@ class BusAlertServiceTest {
                 LocalTime.of(23, 30)
         ));
 
-        assertTrue(message.startsWith("✅ 버스 알림을 등록했어요."));
+        assertTrue(message.startsWith("✅ *버스 알림을 등록했어요*"));
         assertEquals(1, repository.findAll().size());
     }
 
@@ -71,7 +71,7 @@ class BusAlertServiceTest {
         ));
 
         BusAlert alert = repository.findByUserStationAndBus("U123", "텔레칩스", "310").orElseThrow();
-        assertTrue(message.startsWith("✅ 기존 알림을 업데이트했어요."));
+        assertTrue(message.startsWith("✅ *기존 알림을 업데이트했어요*"));
         assertEquals(1, repository.findAll().size());
         assertEquals(7, alert.notifyBeforeMinutes());
     }
@@ -129,7 +129,11 @@ class BusAlertServiceTest {
 
         String message = service.delete(new BusAlertDeleteCommand("U123", "텔레칩스", "310"));
 
-        assertEquals("🗑️ 텔레칩스 310번 알림을 삭제했어요.", message);
+        assertEquals("""
+                🗑️ *알림을 삭제했어요*
+
+                • 정류장: 텔레칩스
+                • 버스: 310번""", message);
         assertFalse(repository.findByUserStationAndBus("U123", "텔레칩스", "310").isPresent());
     }
 
@@ -163,8 +167,9 @@ class BusAlertServiceTest {
         String message = service.markBoarded("U123", "텔레칩스", "310");
 
         assertEquals("""
-                오늘 하루 고생하셨어요 내일 봐요~
-                오늘 알람은 더이상 울리지 않습니다.""", message);
+                🌙 *오늘 하루 고생하셨어요. 내일 봐요~*
+
+                오늘 알림은 더 이상 울리지 않습니다.""", message);
         List<BusAlert> userAlerts = repository.findAllBySlackUserId("U123");
         assertEquals(2, userAlerts.size());
         assertTrue(userAlerts.stream()
@@ -198,7 +203,10 @@ class BusAlertServiceTest {
 
         String message = service.resetNotifications("U123");
 
-        assertEquals("🔔 오늘 알림을 다시 울리도록 초기화했어요.", message);
+        assertEquals("""
+                🔔 *오늘 알림을 다시 켰어요*
+
+                이제 조건이 맞으면 알림이 다시 울립니다.""", message);
         assertTrue(repository.findAllBySlackUserId("U123").stream()
                 .allMatch(alert -> alert.canSendNotification(LocalDateTime.of(2026, 5, 22, 18, 3), 3, 10)));
     }
@@ -207,7 +215,7 @@ class BusAlertServiceTest {
     void resetNotifications_when_empty_returns_notice() {
         String message = service.resetNotifications("U123");
 
-        assertEquals("초기화할 버스 알림이 없어요.", message);
+        assertEquals("ℹ️ *초기화할 버스 알림이 없어요*", message);
     }
 
     private BusRouteRegistry registry() {

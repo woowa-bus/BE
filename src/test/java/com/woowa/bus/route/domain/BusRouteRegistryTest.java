@@ -53,7 +53,11 @@ class BusRouteRegistryTest {
 
         BusRouteException exception = assertThrows(BusRouteException.class, () -> registry.station("강남역"));
 
-        assertEquals("지원하지 않는 정류장이에요.\n\n사용 가능한 정류장:\n- 텔레칩스", exception.getMessage());
+        assertEquals("""
+                ⚠️ *지원하지 않는 정류장이에요*
+
+                사용 가능한 정류장:
+                • 텔레칩스""", exception.getMessage());
     }
 
     @Test
@@ -67,6 +71,11 @@ class BusRouteRegistryTest {
 
         BusRouteException exception = assertThrows(BusRouteException.class, () -> registry.route("텔레칩스", "9999"));
 
-        assertEquals("텔레칩스 정류장에서 지원하지 않는 버스예요.\n\n지원 가능한 버스:\n310, 55", exception.getMessage());
+        assertEquals("""
+                ⚠️ *텔레칩스 정류장에서 지원하지 않는 버스예요*
+
+                지원 가능한 버스:
+                • 310
+                • 55""", exception.getMessage());
     }
 }

@@ -18,6 +18,7 @@ class BusCommandHelpServiceTest {
 
         assertTrue(message.contains("/조회"));
         assertTrue(message.contains("/알림"));
+        assertTrue(message.contains("/알림 초기화"));
         assertTrue(message.contains("/알림목록"));
         assertTrue(message.contains("/알림삭제"));
     }

@@ -88,10 +88,10 @@ class SlackCommandControllerTest {
         String response = controller.alert("U123", "텔레칩스 310 5 5:45 23:30", "trigger123").getBody();
 
         assertEquals("""
-                시간은 HH:mm 형식으로 입력해 주세요.
+                ⚠️ *시간 형식을 확인해 주세요*
 
-                예시:
-                /알림 텔레칩스 310 5 17:45 23:30""", response);
+                • 형식: HH:mm
+                • 예시: /알림 텔레칩스 310 5 17:45 23:30""", response);
     }
 
     @Test
@@ -100,7 +100,7 @@ class SlackCommandControllerTest {
 
         String response = controller.alertList("U123", "").getBody();
 
-        assertEquals("등록된 버스 알림이 없어요.", response);
+        assertEquals("ℹ️ *아직 등록된 버스 알림이 없어요*", response);
     }
 
     @Test
