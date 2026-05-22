@@ -5,6 +5,7 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.search.application.BusArrivalSearchService;
+import com.woowa.bus.slack.application.BusCommandHelpService;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -26,10 +27,16 @@ public class SlackCommandController {
 
     private final BusArrivalSearchService busArrivalSearchService;
     private final BusAlertService busAlertService;
+    private final BusCommandHelpService busCommandHelpService;
 
-    public SlackCommandController(BusArrivalSearchService busArrivalSearchService, BusAlertService busAlertService) {
+    public SlackCommandController(
+            BusArrivalSearchService busArrivalSearchService,
+            BusAlertService busAlertService,
+            BusCommandHelpService busCommandHelpService
+    ) {
         this.busArrivalSearchService = busArrivalSearchService;
         this.busAlertService = busAlertService;
+        this.busCommandHelpService = busCommandHelpService;
     }
 
     @PostMapping("/slack/commands/search")
@@ -119,6 +126,15 @@ public class SlackCommandController {
             log.error("Slack alert-delete command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
         }
+    }
+
+    @PostMapping("/slack/commands/help")
+    public ResponseEntity<String> help(
+            @RequestParam("user_id") String slackUserId,
+            @RequestParam(value = "text", defaultValue = "") String text
+    ) {
+        log.info("Slack help command received. userId={}", slackUserId);
+        return ResponseEntity.ok(busCommandHelpService.help());
     }
 
     private String[] tokens(String text) {
