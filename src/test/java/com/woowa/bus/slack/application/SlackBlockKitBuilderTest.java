@@ -75,6 +75,15 @@ class SlackBlockKitBuilderTest {
     }
 
     @Test
+    void ephemeralText_returns_message_visible_only_to_request_user() throws Exception {
+        String json = builder.ephemeralText("✅ 버스 알림을 등록했어요.");
+
+        JsonNode root = OBJECT_MAPPER.readTree(json);
+        assertEquals("ephemeral", root.get("response_type").asText());
+        assertEquals("✅ 버스 알림을 등록했어요.", root.get("text").asText());
+    }
+
+    @Test
     void stationArrival_renders_header_and_arrival_sections() throws Exception {
         String json = builder.stationArrival(StationArrivalView.success("텔레칩스", List.of(
                 new BusArrivalResult("310", 4, 13),
