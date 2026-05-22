@@ -44,17 +44,22 @@ class SlackBlockKitBuilderTest {
     }
 
     @Test
-    void alertListAfterDelete_replaces_original_with_refreshed_alert_list() throws Exception {
+    void alertListAfterDelete_replaces_original_with_deleted_message_then_refreshed_alert_list() throws Exception {
         String json = builder.alertListAfterDelete(
                 List.of(BusAlertResponse.from(BusAlert.create("U123", "벤처타운(북문)", "55", 3, LocalTime.of(8, 0), LocalTime.of(9, 30)))),
                 "🗑️ 텔레칩스 310번 알림을 삭제했어요."
         );
 
         JsonNode root = OBJECT_MAPPER.readTree(json);
+        JsonNode blocks = root.get("blocks");
         assertEquals("ephemeral", root.get("response_type").asText());
         assertTrue(root.get("replace_original").asBoolean());
+        assertEquals("context", blocks.get(0).get("type").asText());
+        assertEquals("🗑️ 텔레칩스 310번 알림을 삭제했어요.",
+                blocks.get(0).get("elements").get(0).get("text").asText());
+        assertEquals("divider", blocks.get(1).get("type").asText());
+        assertEquals("header", blocks.get(2).get("type").asText());
         assertTrue(json.contains("🔔 등록된 버스 알림"));
-        assertTrue(json.contains("텔레칩스 310번 알림을 삭제했어요."));
         assertTrue(json.contains("벤처타운(북문)"));
     }
 
