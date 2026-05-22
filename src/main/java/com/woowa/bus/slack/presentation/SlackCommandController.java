@@ -117,7 +117,7 @@ public class SlackCommandController {
             );
             String response = busAlertService.save(command);
             log.info("Slack alert command completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
-            return ResponseEntity.ok(response);
+            return jsonOk(slackBlockKitBuilder.ephemeralText(response));
         } catch (RuntimeException exception) {
             log.error("Slack alert command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
