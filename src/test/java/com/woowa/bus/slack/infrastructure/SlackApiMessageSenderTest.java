@@ -40,13 +40,13 @@ class SlackApiMessageSenderTest {
     @Test
     void sendDm_success() {
         SlackApiMessageSender sender = new SlackApiMessageSender(
-                "xoxb-test",
+                "test-slack-token",
                 "http://localhost:%d/chat.postMessage".formatted(server.getAddress().getPort())
         );
 
         sender.sendDm("U123", "hello");
 
-        assertTrue(authorization.contains("Bearer xoxb-test"));
+        assertTrue(authorization.contains("Bearer test-slack-token"));
         assertTrue(requestBody.contains("\"channel\":\"U123\""));
         assertTrue(requestBody.contains("\"text\":\"hello\""));
     }

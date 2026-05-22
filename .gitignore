@@ -38,10 +38,18 @@ out/
 
 ### Secrets ###
 .env
+.env.*
 *.env
 application-local.properties
 application-secret.properties
 application-prod.properties
+application.yml
+resources/application.yml
+src/main/resources/application.yml
+src/test/resources/application.yml
+
+### Runtime Data ###
+data/
 
 ### Local Dev ###
 CLAUDE.md

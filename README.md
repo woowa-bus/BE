@@ -31,7 +31,7 @@
 필수 환경변수:
 
 ```bash
-export SLACK_BOT_TOKEN="xoxb-..."
+export SLACK_BOT_TOKEN="<slack-bot-token>"
 export SLACK_SIGNING_SECRET="..."
 export GBIS_SERVICE_KEY="..."
 ```
@@ -43,6 +43,15 @@ export GBIS_SERVICE_KEY="..."
 - 로컬 데모에서는 ngrok URL을 Slack Slash Command Request URL로 연결합니다.
 
 ## 실행
+
+로컬 설정 파일을 생성합니다.
+
+```bash
+cp src/main/resources/application-example.yml src/main/resources/application.yml
+```
+
+`src/main/resources/application.yml`은 Git에 올리지 않는 로컬 설정 파일입니다.
+Slack token, signing secret, 경기버스 API key는 환경변수로만 주입합니다.
 
 ```bash
 ./gradlew bootRun
@@ -124,7 +133,7 @@ MVP에서는 정류장 이름 중복을 피하기 위해 아래 정류장만 지
 - 텔레칩스
 - 벤처타워(북문)
 
-지원 노선 매핑은 `src/main/resources/application.yml`에서 관리합니다.
+지원 노선 매핑은 로컬의 `src/main/resources/application.yml`에서 관리합니다.
 실제 데모 전 `station-id`, `route-id`, `sta-order`를 경기버스 API 값으로 교체해야 합니다.
 
 ```yaml
@@ -221,8 +230,9 @@ com.woowa.bus
 
 ## 주요 설정 파일
 
-- `src/main/resources/application.yml`: 로컬 실행 설정
-- `src/test/resources/application.yml`: 테스트 실행 설정
+- `src/main/resources/application-example.yml`: 로컬 실행 설정 예시
+- `src/main/resources/application.yml`: Git에 올리지 않는 로컬 실행 설정
+- `src/test/resources/application.properties`: 테스트 실행 설정
 - `build.gradle`: 의존성과 Java 버전
 
 ## 데모 체크리스트
