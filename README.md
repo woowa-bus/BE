@@ -11,6 +11,7 @@
 - `/알림목록`
 - `/알림삭제 [정류장] [버스번호]`
 - `/도움말`
+- `/상태`
 - 1분 주기 알림 스케줄링
 - 같은 알림 10분 내 중복 발송 방지
 - 같은 사용자, 정류장, 버스번호 조합의 중복 등록 시 기존 알림 업데이트
@@ -86,6 +87,7 @@ Slack App에서 아래 명령어를 생성하고, Request URL을 ngrok 주소와
 | `/알림목록` | `POST /slack/commands/alert-list` |
 | `/알림삭제` | `POST /slack/commands/alert-delete` |
 | `/도움말` | `POST /slack/commands/help` |
+| `/상태` | `POST /slack/commands/status` |
 
 Interactivity Request URL (Block Kit 버튼 클릭 처리):
 
@@ -141,6 +143,12 @@ https://{ngrok-domain}/slack/commands/help
 
 ```text
 /도움말
+```
+
+시스템 상태 (GBIS API 호출 통계):
+
+```text
+/상태
 ```
 
 ## 지원 정류장과 버스

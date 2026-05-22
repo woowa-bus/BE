@@ -6,6 +6,7 @@ import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.search.application.BusArrivalSearchService;
 import com.woowa.bus.slack.application.BusCommandHelpService;
+import com.woowa.bus.slack.application.BusStatusService;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -30,17 +31,20 @@ public class SlackCommandController {
     private final BusArrivalSearchService busArrivalSearchService;
     private final BusAlertService busAlertService;
     private final BusCommandHelpService busCommandHelpService;
+    private final BusStatusService busStatusService;
     private final SlackBlockKitBuilder slackBlockKitBuilder;
 
     public SlackCommandController(
             BusArrivalSearchService busArrivalSearchService,
             BusAlertService busAlertService,
             BusCommandHelpService busCommandHelpService,
+            BusStatusService busStatusService,
             SlackBlockKitBuilder slackBlockKitBuilder
     ) {
         this.busArrivalSearchService = busArrivalSearchService;
         this.busAlertService = busAlertService;
         this.busCommandHelpService = busCommandHelpService;
+        this.busStatusService = busStatusService;
         this.slackBlockKitBuilder = slackBlockKitBuilder;
     }
 
@@ -142,6 +146,15 @@ public class SlackCommandController {
     ) {
         log.info("Slack help command received. userId={}", slackUserId);
         return ResponseEntity.ok(busCommandHelpService.help());
+    }
+
+    @PostMapping("/slack/commands/status")
+    public ResponseEntity<String> status(
+            @RequestParam("user_id") String slackUserId,
+            @RequestParam(value = "text", defaultValue = "") String text
+    ) {
+        log.info("Slack status command received. userId={}", slackUserId);
+        return ResponseEntity.ok(busStatusService.status());
     }
 
     private String[] tokens(String text) {
