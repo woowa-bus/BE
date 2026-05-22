@@ -10,6 +10,7 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
+import com.woowa.bus.slack.application.SlackMessageSender;
 import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class SlackActionControllerTest {
     @Test
     void action_delete_calls_alert_service_delete() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        SlackActionController controller = controller(alertService);
 
         String payload = """
                 {
@@ -41,7 +42,7 @@ class SlackActionControllerTest {
     @Test
     void action_delete_replaces_original_message_with_remaining_alerts() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        SlackActionController controller = controller(alertService);
 
         String payload = """
                 {
@@ -55,14 +56,16 @@ class SlackActionControllerTest {
         String body = controller.action(payload).getBody();
 
         assertTrue(body.contains("\"replace_original\":true"));
-        assertTrue(body.contains("🗑️ 삭제되었습니다."));
+        assertTrue(body.contains("🔔 등록된 버스 알림"));
+        assertTrue(body.contains("삭제되었습니다."));
         assertTrue(body.contains("벤처타운(북문)"));
     }
 
     @Test
-    void action_view_submission_creates_alert_and_closes_modal() {
+    void action_view_submission_creates_alert_closes_modal_and_sends_success_message() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        FakeSlackMessageSender messageSender = new FakeSlackMessageSender();
+        SlackActionController controller = controller(alertService, messageSender);
 
         String payload = """
                 {
@@ -92,13 +95,18 @@ class SlackActionControllerTest {
         assertEquals(5, alertService.lastSaved.notifyBeforeMinutes());
         assertEquals(LocalTime.of(17, 45), alertService.lastSaved.startTime());
         assertEquals(LocalTime.of(23, 30), alertService.lastSaved.endTime());
+        assertEquals("U123", messageSender.lastUserId);
+        assertTrue(messageSender.lastText.contains("정류장: 텔레칩스"));
+        assertTrue(messageSender.lastText.contains("버스: 310번"));
+        assertNull(messageSender.lastBlocksJson);
     }
 
     @Test
     void action_view_submission_returns_errors_when_bus_invalid() {
         FakeBusAlertService alertService = new FakeBusAlertService();
         alertService.throwOnSave = new RuntimeException("지원하지 않는 버스예요.");
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        FakeSlackMessageSender messageSender = new FakeSlackMessageSender();
+        SlackActionController controller = controller(alertService, messageSender);
 
         String payload = """
                 {
@@ -122,12 +130,13 @@ class SlackActionControllerTest {
 
         assertTrue(body.contains("\"response_action\":\"errors\""));
         assertTrue(body.contains("지원하지 않는 버스"));
+        assertNull(messageSender.lastText);
     }
 
     @Test
     void action_boarded_marks_alert_and_replaces_message() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        SlackActionController controller = controller(alertService);
 
         String payload = """
                 {
@@ -150,7 +159,7 @@ class SlackActionControllerTest {
     @Test
     void action_unknown_id_is_ignored() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = new SlackActionController(alertService, new SlackBlockKitBuilder());
+        SlackActionController controller = controller(alertService);
 
         String payload = """
                 {
@@ -164,6 +173,28 @@ class SlackActionControllerTest {
         controller.action(payload);
 
         assertNull(alertService.lastDeleted);
+    }
+
+    private SlackActionController controller(FakeBusAlertService alertService) {
+        return controller(alertService, new FakeSlackMessageSender());
+    }
+
+    private SlackActionController controller(FakeBusAlertService alertService, SlackMessageSender messageSender) {
+        return new SlackActionController(alertService, new SlackBlockKitBuilder(), messageSender);
+    }
+
+    private static class FakeSlackMessageSender implements SlackMessageSender {
+
+        private String lastUserId;
+        private String lastText;
+        private String lastBlocksJson;
+
+        @Override
+        public void sendDm(String slackUserId, String text, String blocksJson) {
+            this.lastUserId = slackUserId;
+            this.lastText = text;
+            this.lastBlocksJson = blocksJson;
+        }
     }
 
     private static class FakeBusAlertService extends BusAlertService {
@@ -199,7 +230,11 @@ class SlackActionControllerTest {
                 throw throwOnSave;
             }
             this.lastSaved = command;
-            return "saved";
+            return """
+                    ✅ 버스 알림을 등록했어요.
+
+                    정류장: %s
+                    버스: %s번""".formatted(command.stationName(), command.busNumber());
         }
 
         @Override
