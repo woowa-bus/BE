@@ -80,6 +80,20 @@ public class BusAlertService {
                 .orElse("탑승 처리할 알림을 찾지 못했어요.");
     }
 
+    public String resetNotifications(String slackUserId) {
+        log.info("Resetting bus alert notifications. userId={}", slackUserId);
+        List<BusAlert> alerts = busAlertRepository.findAllBySlackUserId(slackUserId);
+        if (alerts.isEmpty()) {
+            return "초기화할 버스 알림이 없어요.";
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        alerts.forEach(alert -> {
+            alert.resetNotification(now);
+            busAlertRepository.save(alert);
+        });
+        return "🔔 오늘 알림을 다시 울리도록 초기화했어요.";
+    }
+
     public String delete(BusAlertDeleteCommand command) {
         log.info("Deleting bus alert. userId={}, stationName={}, busNumber={}",
                 command.slackUserId(), command.stationName(), command.busNumber());

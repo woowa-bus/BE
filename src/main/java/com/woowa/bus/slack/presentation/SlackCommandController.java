@@ -30,6 +30,7 @@ public class SlackCommandController {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
             .ofPattern("HH:mm")
             .withResolverStyle(ResolverStyle.STRICT);
+    private static final String ALERT_RESET_COMMAND = "초기화";
 
     private final BusArrivalSearchService busArrivalSearchService;
     private final BusAlertService busAlertService;
@@ -103,6 +104,11 @@ public class SlackCommandController {
                 slackViewsClient.open(triggerId, slackModalBuilder.alertCreateModal());
                 log.info("Slack alert modal opened. userId={}", slackUserId);
                 return ResponseEntity.ok("");
+            }
+            if (tokens.length == 1 && ALERT_RESET_COMMAND.equals(tokens[0])) {
+                String response = busAlertService.resetNotifications(slackUserId);
+                log.info("Slack alert reset command completed. userId={}", slackUserId);
+                return jsonOk(slackBlockKitBuilder.ephemeralText(response));
             }
             if (tokens.length != 5) {
                 return ResponseEntity.ok(alertUsage());

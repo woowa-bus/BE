@@ -141,6 +141,7 @@ public final class BusMessageFormatter {
     public static String alertUsage() {
         return """
                 /알림 [정류장] [버스번호] [몇 분 전] [시작시간] [종료시간]
+                /알림 초기화
 
                 예시:
                 /알림 텔레칩스 310 5 17:45 23:30""";

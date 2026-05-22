@@ -121,6 +121,11 @@ public class BusAlert {
         this.updatedAt = now;
     }
 
+    public void resetNotification(LocalDateTime resetAt) {
+        this.lastNotifiedAt = null;
+        this.updatedAt = resetAt;
+    }
+
     public boolean hasSlackUserId(String slackUserId) {
         return this.slackUserId.equals(slackUserId);
     }
