@@ -71,7 +71,7 @@ Slack token, signing secret, 경기버스 API key는 환경변수로만 주입�
 ./gradlew test
 ```
 
-테스트는 `src/test/resources/application.yml`의 H2 in-memory 설정을 사용합니다.
+테스트는 `src/test/resources/application.properties`의 H2 in-memory 설정을 사용합니다.
 실행 중 생성되는 file mode DB와 분리되어 있습니다.
 
 ## Slack Slash Command 설정
@@ -131,31 +131,16 @@ https://{ngrok-domain}/slack/commands/alert-delete
 MVP에서는 정류장 이름 중복을 피하기 위해 아래 정류장만 지원합니다.
 
 - 텔레칩스
-- 벤처타워(북문)
+- 벤처타운(북문)
 
-지원 노선 매핑은 로컬의 `src/main/resources/application.yml`에서 관리합니다.
-실제 데모 전 `station-id`, `route-id`, `sta-order`를 경기버스 API 값으로 교체해야 합니다.
+지원 정류장과 노선 매핑은 DB에서 관리합니다.
+앱 시작 시 정류장 기본 데이터와 해당 정류장의 경유 노선을 경기버스 API에서 읽어 자동으로 저장합니다.
 
-```yaml
-app:
-  bus-routes:
-    stations:
-      - name: 텔레칩스
-        station-id: TODO
-        routes:
-          - bus-number: "310"
-            route-id: TODO
-            sta-order: TODO
-          - bus-number: "55"
-            route-id: TODO
-            sta-order: TODO
-      - name: 벤처타워(북문)
-        station-id: TODO
-        routes:
-          - bus-number: "310"
-            route-id: TODO
-            sta-order: TODO
-```
+| 정류장 | stationId | mobileNo | 지역 |
+| --- | --- | --- | --- |
+| 텔레칩스 | `204000158` | `05341` | 성남 |
+| 벤처타운(북문) | `204000159` | `05342` | 성남 |
+실행 후 `bus_routes` 테이블에 경유 노선이 채워집니다.
 
 ## 알림 정책
 
@@ -243,10 +228,9 @@ com.woowa.bus
 - [ ] `SLACK_BOT_TOKEN` 설정
 - [ ] `SLACK_SIGNING_SECRET` 설정
 - [ ] `GBIS_SERVICE_KEY` 설정
-- [ ] 텔레칩스 `stationId` 확보
-- [ ] 벤처타워(북문) `stationId` 확보
-- [ ] 지원 버스별 `routeId`, `staOrder` 확보
-- [ ] `application.yml`의 TODO 값 교체
+- [x] 텔레칩스 `stationId` 확보
+- [x] 벤처타운(북문) `stationId` 확보
+- [ ] `bus_routes` 테이블 자동 동기화 확인
 - [ ] `/조회 텔레칩스` 응답 확인
 - [ ] `/알림 텔레칩스 310 5 17:45 23:30` 등록 확인
 - [ ] `/알림목록` 확인

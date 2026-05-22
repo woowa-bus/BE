@@ -5,13 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e3f238d1-057e-4ef4-b342-d56189357c87" name="변경" comment="chore: 프로젝트 초기 설정">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules/BE.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules/bus.main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/bus.main.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/domain/SupportedBusRouteRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusRouteDataInitializer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusRouteJpaEntity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusStationJpaEntity.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/JpaSupportedBusRouteRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/SpringDataBusStationRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/route/infrastructure/JpaSupportedBusRouteRepositoryTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/application/BusAlertScheduler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/application/BusAlertScheduler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/application/BusAlertService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/application/BusAlertService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/infrastructure/JpaBusAlertRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/alert/infrastructure/JpaBusAlertRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/arrival/domain/BusArrivalClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/arrival/domain/BusArrivalClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/arrival/infrastructure/GbisBusArrivalClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/arrival/infrastructure/GbisBusArrivalClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/domain/BusRouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/domain/BusRouteRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusRouteConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusRouteConfiguration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/route/infrastructure/BusRouteConfigurationProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/search/application/BusArrivalSearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/search/application/BusArrivalSearchService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/slack/infrastructure/SlackApiMessageSender.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/slack/infrastructure/SlackApiMessageSender.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/woowa/bus/slack/presentation/SlackCommandController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/woowa/bus/slack/presentation/SlackCommandController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application-example.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application-example.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/woowa/bus/alert/application/BusAlertSchedulerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/alert/application/BusAlertSchedulerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/woowa/bus/alert/application/BusAlertServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/alert/application/BusAlertServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/woowa/bus/arrival/infrastructure/GbisBusArrivalClientTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/arrival/infrastructure/GbisBusArrivalClientTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/woowa/bus/route/domain/BusRouteRegistryTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/route/domain/BusRouteRegistryTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/woowa/bus/search/application/BusArrivalSearchServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/woowa/bus/search/application/BusArrivalSearchServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/resources/application.yml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,12 +88,18 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Gradle.Build BE.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "master",
+    "Spring Boot.BusApplication.executor": "Run",
+    "git-widget-placeholder": "bhoon",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/yongtae/Desktop/bus",
     "node.js.detected.package.eslint": "true",
@@ -114,8 +142,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.32098.37" />
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.32098.37" />
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.29188.11" />
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-IU-251.29188.11" />
       </set>
     </attachedChunks>
   </component>

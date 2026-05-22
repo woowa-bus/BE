@@ -10,12 +10,14 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Slf4j
 public class SlackCommandController {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
@@ -35,16 +37,23 @@ public class SlackCommandController {
             @RequestParam("user_id") String slackUserId,
             @RequestParam(value = "text", defaultValue = "") String text
     ) {
+        log.info("Slack search command received. userId={}, rawText={}", slackUserId, text);
         try {
             String[] tokens = tokens(text);
+            log.debug("Slack search tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length == 1) {
-                return ResponseEntity.ok(busArrivalSearchService.searchStation(tokens[0]));
+                String response = busArrivalSearchService.searchStation(tokens[0]);
+                log.info("Slack search station completed. userId={}, stationName={}", slackUserId, tokens[0]);
+                return ResponseEntity.ok(response);
             }
             if (tokens.length == 2) {
-                return ResponseEntity.ok(busArrivalSearchService.searchBus(tokens[0], tokens[1]));
+                String response = busArrivalSearchService.searchBus(tokens[0], tokens[1]);
+                log.info("Slack search bus completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
+                return ResponseEntity.ok(response);
             }
             return ResponseEntity.ok(searchUsage());
         } catch (RuntimeException exception) {
+            log.error("Slack search command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
         }
     }
@@ -54,8 +63,10 @@ public class SlackCommandController {
             @RequestParam("user_id") String slackUserId,
             @RequestParam(value = "text", defaultValue = "") String text
     ) {
+        log.info("Slack alert command received. userId={}, rawText={}", slackUserId, text);
         try {
             String[] tokens = tokens(text);
+            log.debug("Slack alert tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length != 5) {
                 return ResponseEntity.ok(alertUsage());
             }
@@ -67,8 +78,11 @@ public class SlackCommandController {
                     parseTime(tokens[3]),
                     parseTime(tokens[4])
             );
-            return ResponseEntity.ok(busAlertService.save(command));
+            String response = busAlertService.save(command);
+            log.info("Slack alert command completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException exception) {
+            log.error("Slack alert command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
         }
     }
@@ -79,6 +93,7 @@ public class SlackCommandController {
             @RequestParam(value = "text", defaultValue = "") String text
     ) {
         List<BusAlertResponse> alerts = busAlertService.findAllBySlackUserId(slackUserId);
+        log.info("Slack alert-list command. userId={}, alertCount={}", slackUserId, alerts.size());
         if (alerts.isEmpty()) {
             return ResponseEntity.ok("등록된 버스 알림이 없어요.");
         }
@@ -90,13 +105,18 @@ public class SlackCommandController {
             @RequestParam("user_id") String slackUserId,
             @RequestParam(value = "text", defaultValue = "") String text
     ) {
+        log.info("Slack alert-delete command received. userId={}, rawText={}", slackUserId, text);
         try {
             String[] tokens = tokens(text);
+            log.debug("Slack alert-delete tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length != 2) {
                 return ResponseEntity.ok("/알림삭제 [정류장] [버스번호] 형식으로 입력해 주세요.");
             }
-            return ResponseEntity.ok(busAlertService.delete(new BusAlertDeleteCommand(slackUserId, tokens[0], tokens[1])));
+            String response = busAlertService.delete(new BusAlertDeleteCommand(slackUserId, tokens[0], tokens[1]));
+            log.info("Slack alert-delete command completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException exception) {
+            log.error("Slack alert-delete command failed. userId={}, rawText={}", slackUserId, text, exception);
             return ResponseEntity.ok(exception.getMessage());
         }
     }

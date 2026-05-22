@@ -8,11 +8,13 @@ import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@Slf4j
 public class BusAlertService {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -26,6 +28,9 @@ public class BusAlertService {
     }
 
     public String save(BusAlertCreateCommand command) {
+        log.info("Saving bus alert. userId={}, stationName={}, busNumber={}, notifyBeforeMinutes={}, startTime={}, endTime={}",
+                command.slackUserId(), command.stationName(), command.busNumber(),
+                command.notifyBeforeMinutes(), command.startTime(), command.endTime());
         busRouteRegistry.route(command.stationName(), command.busNumber());
         return busAlertRepository.findByUserStationAndBus(
                         command.slackUserId(),
@@ -38,6 +43,7 @@ public class BusAlertService {
 
     @Transactional(readOnly = true)
     public List<BusAlertResponse> findAllBySlackUserId(String slackUserId) {
+        log.info("Loading bus alerts for user. userId={}", slackUserId);
         return busAlertRepository.findAllBySlackUserId(slackUserId)
                 .stream()
                 .map(BusAlertResponse::from)
@@ -45,6 +51,8 @@ public class BusAlertService {
     }
 
     public String delete(BusAlertDeleteCommand command) {
+        log.info("Deleting bus alert. userId={}, stationName={}, busNumber={}",
+                command.slackUserId(), command.stationName(), command.busNumber());
         busRouteRegistry.route(command.stationName(), command.busNumber());
         return busAlertRepository.findByUserStationAndBus(
                         command.slackUserId(),
@@ -68,17 +76,20 @@ public class BusAlertService {
                 command.endTime()
         );
         busAlertRepository.save(alert);
+        log.info("Bus alert created. userId={}, stationName={}, busNumber={}", command.slackUserId(), command.stationName(), command.busNumber());
         return successMessage("✅ 버스 알림을 등록했어요.", command);
     }
 
     private String update(BusAlert alert, BusAlertCreateCommand command) {
         alert.updateNotificationRule(command.notifyBeforeMinutes(), command.startTime(), command.endTime());
         busAlertRepository.save(alert);
+        log.info("Bus alert updated. userId={}, stationName={}, busNumber={}", command.slackUserId(), command.stationName(), command.busNumber());
         return successMessage("✅ 기존 알림을 업데이트했어요.", command);
     }
 
     private String delete(BusAlert alert) {
         busAlertRepository.delete(alert);
+        log.info("Bus alert deleted. userId={}, stationName={}, busNumber={}", alert.slackUserId(), alert.stationName(), alert.busNumber());
         return "🗑️ %s %s번 알림을 삭제했어요.".formatted(alert.stationName(), alert.busNumber());
     }
 
