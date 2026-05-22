@@ -73,7 +73,9 @@ public class BusAlertService {
                                 userAlert.markBoardedToday(now);
                                 busAlertRepository.save(userAlert);
                             });
-                    return "🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.";
+                    return """
+                            오늘 하루 고생하셨어요 내일 봐요~
+                            오늘 알람은 더이상 울리지 않습니다.""";
                 })
                 .orElse("탑승 처리할 알림을 찾지 못했어요.");
     }

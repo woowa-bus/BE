@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.woowa.bus.alert.application.BusAlertService;
 import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
@@ -16,6 +18,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SlackActionControllerTest {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Test
     void action_delete_calls_alert_service_delete() {
@@ -40,7 +44,7 @@ class SlackActionControllerTest {
     }
 
     @Test
-    void action_delete_replaces_original_message_with_remaining_alerts() {
+    void action_delete_replaces_original_message_with_deleted_message_then_remaining_alerts() throws Exception {
         FakeBusAlertService alertService = new FakeBusAlertService();
         SlackActionController controller = controller(alertService);
 
@@ -54,10 +58,15 @@ class SlackActionControllerTest {
                 }""";
 
         String body = controller.action(payload).getBody();
+        JsonNode blocks = OBJECT_MAPPER.readTree(body).get("blocks");
 
         assertTrue(body.contains("\"replace_original\":true"));
+        assertEquals("context", blocks.get(0).get("type").asText());
+        assertTrue(blocks.get(0).get("elements").get(0).get("text").asText()
+                .contains("텔레칩스 310번 알림을 삭제했어요."));
+        assertEquals("divider", blocks.get(1).get("type").asText());
+        assertEquals("header", blocks.get(2).get("type").asText());
         assertTrue(body.contains("🔔 등록된 버스 알림"));
-        assertTrue(body.contains("텔레칩스 310번 알림을 삭제했어요."));
         assertTrue(body.contains("벤처타운(북문)"));
     }
 
@@ -153,7 +162,8 @@ class SlackActionControllerTest {
         assertEquals("텔레칩스", alertService.lastBoardedStation);
         assertEquals("310", alertService.lastBoardedBus);
         assertTrue(body.contains("\"replace_original\":true"));
-        assertTrue(body.contains("모든 버스 알림이 울리지 않습니다."));
+        assertTrue(body.contains("오늘 하루 고생하셨어요 내일 봐요~"));
+        assertTrue(body.contains("오늘 알람은 더이상 울리지 않습니다."));
     }
 
     @Test
@@ -215,7 +225,9 @@ class SlackActionControllerTest {
             this.lastBoardedUser = slackUserId;
             this.lastBoardedStation = stationName;
             this.lastBoardedBus = busNumber;
-            return "🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.";
+            return """
+                    오늘 하루 고생하셨어요 내일 봐요~
+                    오늘 알람은 더이상 울리지 않습니다.""";
         }
 
         @Override
