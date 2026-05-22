@@ -73,10 +73,13 @@ class SlackBlockKitBuilderTest {
 
     @Test
     void boardedAcknowledgement_shows_all_alerts_are_suppressed_today() {
-        String json = builder.boardedAcknowledgement("🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.");
+        String json = builder.boardedAcknowledgement("""
+                오늘 하루 고생하셨어요 내일 봐요~
+                오늘 알람은 더이상 울리지 않습니다.""");
 
         assertTrue(json.contains("\"replace_original\":true"));
-        assertTrue(json.contains("모든 버스 알림이 울리지 않습니다."));
+        assertTrue(json.contains("오늘 하루 고생하셨어요 내일 봐요~"));
+        assertTrue(json.contains("오늘 알람은 더이상 울리지 않습니다."));
     }
 
     @Test

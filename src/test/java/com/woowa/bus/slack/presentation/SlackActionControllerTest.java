@@ -162,7 +162,8 @@ class SlackActionControllerTest {
         assertEquals("텔레칩스", alertService.lastBoardedStation);
         assertEquals("310", alertService.lastBoardedBus);
         assertTrue(body.contains("\"replace_original\":true"));
-        assertTrue(body.contains("모든 버스 알림이 울리지 않습니다."));
+        assertTrue(body.contains("오늘 하루 고생하셨어요 내일 봐요~"));
+        assertTrue(body.contains("오늘 알람은 더이상 울리지 않습니다."));
     }
 
     @Test
@@ -224,7 +225,9 @@ class SlackActionControllerTest {
             this.lastBoardedUser = slackUserId;
             this.lastBoardedStation = stationName;
             this.lastBoardedBus = busNumber;
-            return "🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.";
+            return """
+                    오늘 하루 고생하셨어요 내일 봐요~
+                    오늘 알람은 더이상 울리지 않습니다.""";
         }
 
         @Override
