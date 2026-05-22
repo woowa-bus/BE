@@ -7,6 +7,7 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.search.application.BusArrivalSearchService;
+import com.woowa.bus.slack.application.BusCommandHelpService;
 import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -15,10 +16,7 @@ class SlackCommandControllerTest {
 
     @Test
     void search_success_when_station_name_only() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.search("U123", "텔레칩스").getBody();
 
@@ -27,10 +25,7 @@ class SlackCommandControllerTest {
 
     @Test
     void search_success_when_station_name_and_bus_number() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.search("U123", "텔레칩스 310").getBody();
 
@@ -39,10 +34,7 @@ class SlackCommandControllerTest {
 
     @Test
     void alert_success() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.alert("U123", "텔레칩스 310 5 17:45 23:30").getBody();
 
@@ -51,10 +43,7 @@ class SlackCommandControllerTest {
 
     @Test
     void alert_fail_with_invalid_time_format() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.alert("U123", "텔레칩스 310 5 5:45 23:30").getBody();
 
@@ -67,10 +56,7 @@ class SlackCommandControllerTest {
 
     @Test
     void alertList_success_when_empty() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.alertList("U123", "").getBody();
 
@@ -79,14 +65,28 @@ class SlackCommandControllerTest {
 
     @Test
     void alertDelete_success() {
-        SlackCommandController controller = new SlackCommandController(
-                new FakeBusArrivalSearchService(),
-                new FakeBusAlertService()
-        );
+        SlackCommandController controller = controller();
 
         String response = controller.alertDelete("U123", "텔레칩스 310").getBody();
 
         assertEquals("alert deleted: 텔레칩스 310", response);
+    }
+
+    @Test
+    void help_success() {
+        SlackCommandController controller = controller();
+
+        String response = controller.help("U123", "").getBody();
+
+        assertEquals("help text", response);
+    }
+
+    private SlackCommandController controller() {
+        return new SlackCommandController(
+                new FakeBusArrivalSearchService(),
+                new FakeBusAlertService(),
+                new FakeBusCommandHelpService()
+        );
     }
 
     private static class FakeBusArrivalSearchService extends BusArrivalSearchService {
@@ -103,6 +103,18 @@ class SlackCommandControllerTest {
         @Override
         public String searchBus(String stationName, String busNumber) {
             return "bus search: " + stationName + " " + busNumber;
+        }
+    }
+
+    private static class FakeBusCommandHelpService extends BusCommandHelpService {
+
+        FakeBusCommandHelpService() {
+            super(null);
+        }
+
+        @Override
+        public String help() {
+            return "help text";
         }
     }
 
