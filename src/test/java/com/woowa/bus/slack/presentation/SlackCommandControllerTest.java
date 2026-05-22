@@ -8,7 +8,10 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
+import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.search.application.BusArrivalSearchService;
+import com.woowa.bus.search.application.BusArrivalView;
+import com.woowa.bus.search.application.StationArrivalView;
 import com.woowa.bus.slack.application.BusCommandHelpService;
 import com.woowa.bus.slack.application.BusStatusService;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
@@ -25,7 +28,9 @@ class SlackCommandControllerTest {
 
         String response = controller.search("U123", "텔레칩스").getBody();
 
-        assertEquals("station search: 텔레칩스", response);
+        assertTrue(response.contains("\"blocks\""));
+        assertTrue(response.contains("텔레칩스 정류장 도착 정보"));
+        assertTrue(response.contains("310번"));
     }
 
     @Test
@@ -34,7 +39,9 @@ class SlackCommandControllerTest {
 
         String response = controller.search("U123", "텔레칩스 310").getBody();
 
-        assertEquals("bus search: 텔레칩스 310", response);
+        assertTrue(response.contains("\"blocks\""));
+        assertTrue(response.contains("310번 버스 도착 정보"));
+        assertTrue(response.contains("4분 후"));
     }
 
     @Test
@@ -129,13 +136,15 @@ class SlackCommandControllerTest {
         }
 
         @Override
-        public String searchStation(String stationName) {
-            return "station search: " + stationName;
+        public StationArrivalView resolveStation(String stationName) {
+            return StationArrivalView.success(stationName, List.of(
+                    new BusArrivalResult("310", 4, 13)
+            ));
         }
 
         @Override
-        public String searchBus(String stationName, String busNumber) {
-            return "bus search: " + stationName + " " + busNumber;
+        public BusArrivalView resolveBus(String stationName, String busNumber) {
+            return BusArrivalView.found(stationName, busNumber, new BusArrivalResult(busNumber, 4, 13));
         }
     }
 
