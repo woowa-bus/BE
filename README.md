@@ -47,10 +47,10 @@ export GBIS_SERVICE_KEY="..."
 로컬 설정 파일을 생성합니다.
 
 ```bash
-cp src/main/resources/application-example.yml src/main/resources/application.yml
+cp src/main/resources/application-example.properties src/main/resources/application.properties
 ```
 
-`src/main/resources/application.yml`은 Git에 올리지 않는 로컬 설정 파일입니다.
+`src/main/resources/application.properties`에는 로컬 실행용 기본값이 들어 있습니다.
 Slack token, signing secret, 경기버스 API key는 환경변수로만 주입합니다.
 
 ```bash
@@ -215,8 +215,8 @@ com.woowa.bus
 
 ## 주요 설정 파일
 
-- `src/main/resources/application-example.yml`: 로컬 실행 설정 예시
-- `src/main/resources/application.yml`: Git에 올리지 않는 로컬 실행 설정
+- `src/main/resources/application-example.properties`: 로컬 실행 설정 예시
+- `src/main/resources/application.properties`: 로컬 실행 설정
 - `src/test/resources/application.properties`: 테스트 실행 설정
 - `build.gradle`: 의존성과 Java 버전
 

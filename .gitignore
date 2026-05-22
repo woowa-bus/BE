@@ -47,6 +47,7 @@ application.yml
 resources/application.yml
 src/main/resources/application.yml
 src/test/resources/application.yml
+src/main/resources/application.properties
 
 ### Runtime Data ###
 data/
