@@ -87,6 +87,14 @@ Slack App에서 아래 명령어를 생성하고, Request URL을 ngrok 주소와
 | `/알림삭제` | `POST /slack/commands/alert-delete` |
 | `/도움말` | `POST /slack/commands/help` |
 
+Interactivity Request URL (Block Kit 버튼 클릭 처리):
+
+```text
+https://{ngrok-domain}/slack/actions
+```
+
+`/알림목록` 응답은 Block Kit으로 렌더링되며, 각 알림 옆 `삭제` 버튼이 `/slack/actions` 엔드포인트로 인터랙티브 페이로드를 전송합니다.
+
 예시:
 
 ```text

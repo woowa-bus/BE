@@ -6,12 +6,14 @@ import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.search.application.BusArrivalSearchService;
 import com.woowa.bus.slack.application.BusCommandHelpService;
+import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,15 +30,18 @@ public class SlackCommandController {
     private final BusArrivalSearchService busArrivalSearchService;
     private final BusAlertService busAlertService;
     private final BusCommandHelpService busCommandHelpService;
+    private final SlackBlockKitBuilder slackBlockKitBuilder;
 
     public SlackCommandController(
             BusArrivalSearchService busArrivalSearchService,
             BusAlertService busAlertService,
-            BusCommandHelpService busCommandHelpService
+            BusCommandHelpService busCommandHelpService,
+            SlackBlockKitBuilder slackBlockKitBuilder
     ) {
         this.busArrivalSearchService = busArrivalSearchService;
         this.busAlertService = busAlertService;
         this.busCommandHelpService = busCommandHelpService;
+        this.slackBlockKitBuilder = slackBlockKitBuilder;
     }
 
     @PostMapping("/slack/commands/search")
@@ -104,7 +109,9 @@ public class SlackCommandController {
         if (alerts.isEmpty()) {
             return ResponseEntity.ok("등록된 버스 알림이 없어요.");
         }
-        return ResponseEntity.ok(alertListMessage(alerts));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(slackBlockKitBuilder.alertList(alerts));
     }
 
     @PostMapping("/slack/commands/alert-delete")
