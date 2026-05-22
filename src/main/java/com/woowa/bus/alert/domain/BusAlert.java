@@ -192,21 +192,21 @@ public class BusAlert {
     private static void validateNotifyBeforeMinutes(int notifyBeforeMinutes) {
         if (notifyBeforeMinutes < MIN_NOTIFY_BEFORE_MINUTES || notifyBeforeMinutes > MAX_NOTIFY_BEFORE_MINUTES) {
             throw new BusAlertException("""
-                    알림 기준 시간은 1~30분 사이로 입력해 주세요.
+                    ⚠️ *알림 기준 시간을 확인해 주세요*
 
-                    예시:
-                    /알림 텔레칩스 310 5 17:45 23:30""");
+                    • 범위: 1~30분
+                    • 예시: /알림 텔레칩스 310 5 17:45 23:30""");
         }
     }
 
     private static void validateTimeRange(LocalTime startTime, LocalTime endTime) {
         if (!endTime.isAfter(startTime)) {
             throw new BusAlertException("""
-                    종료 시간은 시작 시간보다 늦어야 해요.
-                    MVP에서는 자정을 넘기는 알림 시간을 지원하지 않아요.
+                    ⚠️ *알림 시간을 확인해 주세요*
 
-                    예시:
-                    /알림 텔레칩스 310 5 17:45 23:30""");
+                    • 종료 시간은 시작 시간보다 늦어야 해요.
+                    • 자정을 넘기는 알림 시간은 아직 지원하지 않아요.
+                    • 예시: /알림 텔레칩스 310 5 17:45 23:30""");
         }
     }
 }

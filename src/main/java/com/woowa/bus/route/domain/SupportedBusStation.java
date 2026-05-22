@@ -23,9 +23,16 @@ public record SupportedBusStation(
                 .filter(route -> route.busNumber().equals(busNumber))
                 .findFirst()
                 .orElseThrow(() -> new BusRouteException("""
-                        %s 정류장에서 지원하지 않는 버스예요.
+                        ⚠️ *%s 정류장에서 지원하지 않는 버스예요*
 
                         지원 가능한 버스:
-                        %s""".formatted(name, String.join(", ", busNumbers()))));
+                        %s""".formatted(name, availableBusMessage())));
+    }
+
+    private String availableBusMessage() {
+        return busNumbers().stream()
+                .map(busNumber -> "• " + busNumber)
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("");
     }
 }

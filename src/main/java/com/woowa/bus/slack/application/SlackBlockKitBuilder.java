@@ -31,6 +31,8 @@ public class SlackBlockKitBuilder {
         ObjectNode root = OBJECT_MAPPER.createObjectNode();
         root.put("response_type", "ephemeral");
         root.put("text", text);
+        ArrayNode blocks = root.putArray("blocks");
+        blocks.add(section(text));
         return root.toString();
     }
 
@@ -48,7 +50,7 @@ public class SlackBlockKitBuilder {
         }
         blocks.add(header("🔔 등록된 버스 알림"));
         if (alerts.isEmpty()) {
-            blocks.add(context("등록된 버스 알림이 없어요."));
+            blocks.add(context("ℹ️ 아직 등록된 버스 알림이 없어요."));
         } else {
             for (BusAlertResponse alert : alerts) {
                 blocks.add(alertSection(alert));
@@ -74,15 +76,26 @@ public class SlackBlockKitBuilder {
         return divider;
     }
 
+    private ObjectNode section(String mrkdwn) {
+        ObjectNode section = OBJECT_MAPPER.createObjectNode();
+        section.put("type", "section");
+        ObjectNode text = section.putObject("text");
+        text.put("type", "mrkdwn");
+        text.put("text", mrkdwn);
+        return section;
+    }
+
     public String alertNotificationBlocks(BusAlert alert, BusArrivalResult arrival, LocalDateTime now) {
         ArrayNode blocks = OBJECT_MAPPER.createArrayNode();
         blocks.add(header("🔔 %s번 버스가 곧 도착해요!".formatted(alert.busNumber())));
 
-        ObjectNode section = blocks.addObject();
-        section.put("type", "section");
-        ObjectNode text = section.putObject("text");
-        text.put("type", "mrkdwn");
-        text.put("text", "*현재 시각:* %s\n*정류장:* %s\n*예상 도착:* %s\n*다음 버스:* %s\n*알림 기준:* %d분 전\n*알림 시간:* %s~%s".formatted(
+        blocks.add(section("""
+                • 현재 시각: %s
+                • 정류장: %s
+                • 예상 도착: %s
+                • 다음 버스: %s
+                • 알림 기준: 도착 %d분 전
+                • 알림 시간: %s~%s""".formatted(
                 now.format(TIME_FORMATTER),
                 alert.stationName(),
                 arrivalText(arrival.predictTime1()),
@@ -90,7 +103,7 @@ public class SlackBlockKitBuilder {
                 alert.notifyBeforeMinutes(),
                 alert.startTime().format(TIME_FORMATTER),
                 alert.endTime().format(TIME_FORMATTER)
-        ));
+        )));
 
         ObjectNode actions = blocks.addObject();
         actions.put("type", "actions");
@@ -112,11 +125,7 @@ public class SlackBlockKitBuilder {
         ObjectNode root = OBJECT_MAPPER.createObjectNode();
         root.put("replace_original", true);
         ArrayNode blocks = root.putArray("blocks");
-        ObjectNode section = blocks.addObject();
-        section.put("type", "section");
-        ObjectNode text = section.putObject("text");
-        text.put("type", "mrkdwn");
-        text.put("text", message);
+        blocks.add(section(message));
         return root.toString();
     }
 
@@ -130,7 +139,7 @@ public class SlackBlockKitBuilder {
         ArrayNode blocks = root.putArray("blocks");
         blocks.add(header("🚌 %s 정류장 도착 정보".formatted(view.stationName())));
         if (view.arrivals().isEmpty()) {
-            blocks.add(context("등록된 버스 정보가 없어요."));
+            blocks.add(context("ℹ️ 등록된 버스 정보가 없어요."));
         } else {
             for (BusArrivalResult arrival : view.arrivals()) {
                 blocks.add(arrivalSection(arrival));
@@ -151,18 +160,17 @@ public class SlackBlockKitBuilder {
         blocks.add(header("🚌 %s번 버스 도착 정보".formatted(view.busNumber())));
 
         if (!view.hasArrival()) {
-            blocks.add(context("현재 도착 예정 정보가 없어요.\n정류장: %s / 버스: %s번"
+            blocks.add(context("ℹ️ 현재 도착 예정 정보가 없어요.\n• 정류장: %s\n• 버스: %s번"
                     .formatted(view.stationName(), view.busNumber())));
         } else {
-            ObjectNode section = blocks.addObject();
-            section.put("type", "section");
-            ObjectNode text = section.putObject("text");
-            text.put("type", "mrkdwn");
-            text.put("text", "*정류장:* %s\n*첫 번째 버스:* %s\n*두 번째 버스:* %s".formatted(
+            blocks.add(section("""
+                    • 정류장: %s
+                    • 첫 번째 버스: %s
+                    • 두 번째 버스: %s""".formatted(
                     view.stationName(),
                     arrivalText(view.arrival().predictTime1()),
                     arrivalText(view.arrival().predictTime2())
-            ));
+            )));
         }
 
         return root.toString();
@@ -172,31 +180,24 @@ public class SlackBlockKitBuilder {
         ObjectNode root = OBJECT_MAPPER.createObjectNode();
         root.put("response_type", "ephemeral");
         ArrayNode blocks = root.putArray("blocks");
-        ObjectNode section = blocks.addObject();
-        section.put("type", "section");
-        ObjectNode text = section.putObject("text");
-        text.put("type", "mrkdwn");
-        text.put("text", message);
+        blocks.add(section(message));
         return root.toString();
     }
 
     private ObjectNode arrivalSection(BusArrivalResult arrival) {
-        ObjectNode section = OBJECT_MAPPER.createObjectNode();
-        section.put("type", "section");
-        ObjectNode text = section.putObject("text");
-        text.put("type", "mrkdwn");
         if (!arrival.hasArrival()) {
-            text.put("text", "*%s번*\n현재 도착 예정 정보가 없어요.".formatted(arrival.busNumber()));
+            return section("*%s번*\n• 도착 예정 정보 없음".formatted(arrival.busNumber()));
         } else if (arrival.predictTime2() == null) {
-            text.put("text", "*%s번*\n%s".formatted(arrival.busNumber(), arrivalText(arrival.predictTime1())));
-        } else {
-            text.put("text", "*%s번*\n%s / 다음 %s".formatted(
-                    arrival.busNumber(),
-                    arrivalText(arrival.predictTime1()),
-                    arrivalText(arrival.predictTime2())
-            ));
+            return section("*%s번*\n• 첫 번째 버스: %s".formatted(arrival.busNumber(), arrivalText(arrival.predictTime1())));
         }
-        return section;
+        return section("""
+                *%s번*
+                • 첫 번째 버스: %s
+                • 다음 버스: %s""".formatted(
+                arrival.busNumber(),
+                arrivalText(arrival.predictTime1()),
+                arrivalText(arrival.predictTime2())
+        ));
     }
 
     private String arrivalText(Integer predictTime) {
@@ -222,7 +223,10 @@ public class SlackBlockKitBuilder {
 
         ObjectNode text = section.putObject("text");
         text.put("type", "mrkdwn");
-        text.put("text", "*%s* / %s번\n도착 %d분 전 / %s~%s".formatted(
+        text.put("text", """
+                *%s %s번*
+                • 알림 기준: 도착 %d분 전
+                • 알림 시간: %s~%s""".formatted(
                 alert.stationName(),
                 alert.busNumber(),
                 alert.notifyBeforeMinutes(),

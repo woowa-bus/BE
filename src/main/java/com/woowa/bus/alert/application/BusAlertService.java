@@ -74,24 +74,31 @@ public class BusAlertService {
                                 busAlertRepository.save(userAlert);
                             });
                     return """
-                            오늘 하루 고생하셨어요 내일 봐요~
-                            오늘 알람은 더이상 울리지 않습니다.""";
+                            🌙 *오늘 하루 고생하셨어요. 내일 봐요~*
+
+                            오늘 알림은 더 이상 울리지 않습니다.""";
                 })
-                .orElse("탑승 처리할 알림을 찾지 못했어요.");
+                .orElse("""
+                        ℹ️ *탑승 처리할 알림을 찾지 못했어요*
+
+                        등록된 알림은 `/알림목록`으로 확인할 수 있어요.""");
     }
 
     public String resetNotifications(String slackUserId) {
         log.info("Resetting bus alert notifications. userId={}", slackUserId);
         List<BusAlert> alerts = busAlertRepository.findAllBySlackUserId(slackUserId);
         if (alerts.isEmpty()) {
-            return "초기화할 버스 알림이 없어요.";
+            return "ℹ️ *초기화할 버스 알림이 없어요*";
         }
         LocalDateTime now = LocalDateTime.now(clock);
         alerts.forEach(alert -> {
             alert.resetNotification(now);
             busAlertRepository.save(alert);
         });
-        return "🔔 오늘 알림을 다시 울리도록 초기화했어요.";
+        return """
+                🔔 *오늘 알림을 다시 켰어요*
+
+                이제 조건이 맞으면 알림이 다시 울립니다.""";
     }
 
     public String delete(BusAlertDeleteCommand command) {
@@ -106,9 +113,9 @@ public class BusAlertService {
                 )
                 .map(this::delete)
                 .orElse("""
-                        삭제할 알림을 찾지 못했어요.
+                        ℹ️ *삭제할 알림을 찾지 못했어요*
 
-                        등록된 알림은 /알림목록 으로 확인할 수 있어요.""");
+                        등록된 알림은 `/알림목록`으로 확인할 수 있어요.""");
     }
 
     private String create(BusAlertCreateCommand command, String stationName) {
@@ -122,14 +129,14 @@ public class BusAlertService {
         );
         busAlertRepository.save(alert);
         log.info("Bus alert created. userId={}, stationName={}, busNumber={}", command.slackUserId(), stationName, command.busNumber());
-        return BusMessageFormatter.alertCreated("✅ 버스 알림을 등록했어요.", command);
+        return BusMessageFormatter.alertCreated("✅ *버스 알림을 등록했어요*", command);
     }
 
     private String update(BusAlert alert, BusAlertCreateCommand command, String stationName) {
         alert.updateNotificationRule(command.notifyBeforeMinutes(), command.startTime(), command.endTime());
         busAlertRepository.save(alert);
         log.info("Bus alert updated. userId={}, stationName={}, busNumber={}", command.slackUserId(), stationName, command.busNumber());
-        return BusMessageFormatter.alertCreated("✅ 기존 알림을 업데이트했어요.", command);
+        return BusMessageFormatter.alertCreated("✅ *기존 알림을 업데이트했어요*", command);
     }
 
     private String delete(BusAlert alert) {

@@ -115,9 +115,9 @@ public class SlackActionController {
             log.info("Slack alert modal submission accepted. userId={}, station={}, bus={}", userId, station, bus);
             return empty();
         } catch (NumberFormatException exception) {
-            return submissionError(SlackModalBuilder.BLOCK_NOTIFY_BEFORE, "1~30 사이 숫자를 입력해 주세요.");
+            return submissionError(SlackModalBuilder.BLOCK_NOTIFY_BEFORE, "1~30 사이 숫자를 입력해 주세요");
         } catch (DateTimeParseException exception) {
-            return submissionError(SlackModalBuilder.BLOCK_START_TIME, "시간을 선택해 주세요.");
+            return submissionError(SlackModalBuilder.BLOCK_START_TIME, "시간을 선택해 주세요");
         } catch (RuntimeException exception) {
             log.warn("Slack alert modal submission rejected. userId={}, station={}, bus={}, reason={}",
                     userId, station, bus, exception.getMessage());
