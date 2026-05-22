@@ -12,6 +12,10 @@
 - `/알림삭제 [정류장] [버스번호]`
 - 정류장 별칭 허용
 - 조회 결과는 도착 시간 순으로 정렬
+- `/도움말`
+- `/상태`
+- `/알림목록`은 Block Kit으로 렌더링
+- `/알림목록`에서 삭제 버튼 제공
 - 1분 주기 알림 스케줄링
 - 같은 알림 10분 내 중복 발송 방지
 - 같은 사용자, 정류장, 버스번호 조합의 중복 등록 시 기존 알림 업데이트
@@ -86,6 +90,16 @@ Slack App에서 아래 명령어를 생성하고, Request URL을 ngrok 주소와
 | `/알림` | `POST /slack/commands/alert` |
 | `/알림목록` | `POST /slack/commands/alert-list` |
 | `/알림삭제` | `POST /slack/commands/alert-delete` |
+| `/도움말` | `POST /slack/commands/help` |
+| `/상태` | `POST /slack/commands/status` |
+
+Interactivity Request URL (Block Kit 버튼 클릭 처리):
+
+```text
+https://{ngrok-domain}/slack/actions
+```
+
+`/알림목록` 응답은 Block Kit으로 렌더링되며, 각 알림 옆 `삭제` 버튼이 `/slack/actions` 엔드포인트로 인터랙티브 페이로드를 전송합니다.
 
 예시:
 
@@ -94,6 +108,7 @@ https://{ngrok-domain}/slack/commands/search
 https://{ngrok-domain}/slack/commands/alert
 https://{ngrok-domain}/slack/commands/alert-list
 https://{ngrok-domain}/slack/commands/alert-delete
+https://{ngrok-domain}/slack/commands/help
 ```
 
 ## 명령어 예시
@@ -126,6 +141,18 @@ https://{ngrok-domain}/slack/commands/alert-delete
 
 ```text
 /알림삭제 텔레칩스 310
+```
+
+도움말:
+
+```text
+/도움말
+```
+
+시스템 상태 (GBIS API 호출 통계):
+
+```text
+/상태
 ```
 
 ## 지원 정류장과 버스

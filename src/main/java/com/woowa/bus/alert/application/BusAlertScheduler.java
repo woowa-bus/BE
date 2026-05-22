@@ -1,6 +1,8 @@
 package com.woowa.bus.alert.application;
 
 import com.woowa.bus.alert.domain.BusAlert;
+import com.woowa.bus.alert.domain.BusAlertHistory;
+import com.woowa.bus.alert.domain.BusAlertHistoryRepository;
 import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.arrival.domain.BusArrivalClient;
 import com.woowa.bus.arrival.domain.BusArrivalException;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusAlertScheduler {
 
     private final BusAlertRepository busAlertRepository;
+    private final BusAlertHistoryRepository busAlertHistoryRepository;
     private final BusRouteRegistry busRouteRegistry;
     private final BusArrivalClient busArrivalClient;
     private final SlackMessageSender slackMessageSender;
@@ -34,6 +37,7 @@ public class BusAlertScheduler {
 
     public BusAlertScheduler(
             BusAlertRepository busAlertRepository,
+            BusAlertHistoryRepository busAlertHistoryRepository,
             BusRouteRegistry busRouteRegistry,
             BusArrivalClient busArrivalClient,
             SlackMessageSender slackMessageSender,
@@ -41,6 +45,7 @@ public class BusAlertScheduler {
             @Value("${app.alert.cooldown-minutes:10}") int cooldownMinutes
     ) {
         this.busAlertRepository = busAlertRepository;
+        this.busAlertHistoryRepository = busAlertHistoryRepository;
         this.busRouteRegistry = busRouteRegistry;
         this.busArrivalClient = busArrivalClient;
         this.slackMessageSender = slackMessageSender;
@@ -88,6 +93,14 @@ public class BusAlertScheduler {
             slackMessageSender.sendDm(alert.slackUserId(), BusMessageFormatter.alertNotification(alert, arrival));
             alert.markNotified(now);
             busAlertRepository.save(alert);
+            busAlertHistoryRepository.save(BusAlertHistory.record(
+                    alert.slackUserId(),
+                    alert.stationName(),
+                    alert.busNumber(),
+                    arrival.predictTime1(),
+                    arrival.predictTime2(),
+                    now
+            ));
             log.info("Bus alert marked as notified. alertId={}, userId={}, stationName={}, busNumber={}",
                     alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber());
         } catch (BusRouteException exception) {
