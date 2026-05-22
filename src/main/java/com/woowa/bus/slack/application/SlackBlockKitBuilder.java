@@ -42,10 +42,11 @@ public class SlackBlockKitBuilder {
         }
 
         ArrayNode blocks = root.putArray("blocks");
-        blocks.add(header("🔔 등록된 버스 알림"));
         if (deletedMessage != null && !deletedMessage.isBlank()) {
             blocks.add(context(deletedMessage));
+            blocks.add(divider());
         }
+        blocks.add(header("🔔 등록된 버스 알림"));
         if (alerts.isEmpty()) {
             blocks.add(context("등록된 버스 알림이 없어요."));
         } else {
@@ -65,6 +66,12 @@ public class SlackBlockKitBuilder {
         element.put("type", "mrkdwn");
         element.put("text", text);
         return context;
+    }
+
+    private ObjectNode divider() {
+        ObjectNode divider = OBJECT_MAPPER.createObjectNode();
+        divider.put("type", "divider");
+        return divider;
     }
 
     public String alertNotificationBlocks(BusAlert alert, BusArrivalResult arrival, LocalDateTime now) {
