@@ -112,6 +112,38 @@ class BusAlertTest {
     }
 
     @Test
+    void markBoardedToday_suppresses_further_alerts_today() {
+        BusAlert alert = BusAlert.create(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        );
+
+        alert.markBoardedToday(LocalDateTime.of(2026, 5, 22, 18, 1));
+
+        assertFalse(alert.canSendNotification(LocalDateTime.of(2026, 5, 22, 22, 0), 3, 10));
+    }
+
+    @Test
+    void markBoardedToday_does_not_block_next_day() {
+        BusAlert alert = BusAlert.create(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        );
+
+        alert.markBoardedToday(LocalDateTime.of(2026, 5, 22, 18, 1));
+
+        assertTrue(alert.canSendNotification(LocalDateTime.of(2026, 5, 23, 18, 1), 3, 10));
+    }
+
+    @Test
     void canSendNotification_handles_no_arrival_information() {
         BusAlert alert = BusAlert.create(
                 "U123",

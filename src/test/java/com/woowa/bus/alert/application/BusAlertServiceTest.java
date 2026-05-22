@@ -21,7 +21,11 @@ import org.junit.jupiter.api.Test;
 class BusAlertServiceTest {
 
     private final FakeBusAlertRepository repository = new FakeBusAlertRepository();
-    private final BusAlertService service = new BusAlertService(repository, registry());
+    private final BusAlertService service = new BusAlertService(
+            repository,
+            registry(),
+            java.time.Clock.systemDefaultZone()
+    );
 
     @Test
     void save_success_when_new_alert() {
