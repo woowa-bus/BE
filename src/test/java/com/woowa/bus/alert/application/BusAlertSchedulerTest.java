@@ -17,6 +17,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class BusAlertSchedulerTest {
@@ -61,6 +62,28 @@ class BusAlertSchedulerTest {
         assertEquals(0, slackMessageSender.messages.size());
     }
 
+    @Test
+    void sendBusAlerts_loads_arrivals_once_per_station() {
+        FakeBusAlertRepository repository = new FakeBusAlertRepository();
+        repository.save(BusAlert.create("U123", "텔레칩스", "310", 5, LocalTime.of(17, 45), LocalTime.of(23, 30)));
+        repository.save(BusAlert.create("U123", "텔레칩스", "55", 5, LocalTime.of(17, 45), LocalTime.of(23, 30)));
+        CountingBusArrivalClient busArrivalClient = new CountingBusArrivalClient();
+        FakeSlackMessageSender slackMessageSender = new FakeSlackMessageSender();
+        BusAlertScheduler scheduler = new BusAlertScheduler(
+                repository,
+                registry(),
+                busArrivalClient,
+                slackMessageSender,
+                Clock.fixed(Instant.parse("2026-05-22T09:01:00Z"), ZoneId.of("Asia/Seoul")),
+                10
+        );
+
+        scheduler.sendBusAlerts();
+
+        assertEquals(1, busArrivalClient.calls.get());
+        assertEquals(2, slackMessageSender.messages.size());
+    }
+
     private BusRouteRegistry registry() {
         return BusRouteRegistry.of(List.of(
                 SupportedBusStation.of("텔레칩스", "200000001", List.of(
@@ -74,6 +97,20 @@ class BusAlertSchedulerTest {
         @Override
         public List<BusArrivalResult> getArrivals(String stationId) {
             return List.of(new BusArrivalResult("310", 4, 13));
+        }
+    }
+
+    private static class CountingBusArrivalClient implements BusArrivalClient {
+
+        private final AtomicInteger calls = new AtomicInteger();
+
+        @Override
+        public List<BusArrivalResult> getArrivals(String stationId) {
+            calls.incrementAndGet();
+            return List.of(
+                    new BusArrivalResult("310", 4, 13),
+                    new BusArrivalResult("55", 4, 15)
+            );
         }
     }
 

@@ -9,10 +9,12 @@ import com.woowa.bus.route.domain.BusRouteException;
 import com.woowa.bus.route.domain.BusRouteRegistry;
 import com.woowa.bus.route.domain.SupportedBusStation;
 import com.woowa.bus.slack.application.SlackMessageSender;
+import com.woowa.bus.message.BusMessageFormatter;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @Slf4j
 public class BusAlertScheduler {
-
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final BusAlertRepository busAlertRepository;
     private final BusRouteRegistry busRouteRegistry;
@@ -54,16 +54,25 @@ public class BusAlertScheduler {
         LocalDateTime now = LocalDateTime.now(clock);
         List<BusAlert> alerts = busAlertRepository.findAll();
         log.info("Bus alert scheduler started. now={}, alertCount={}", now, alerts.size());
-        alerts.forEach(alert -> sendBusAlert(alert, now));
+        Map<String, List<BusAlert>> alertsByStation = alerts.stream()
+                .collect(Collectors.groupingBy(alert -> busRouteRegistry.station(alert.stationName()).name()));
+        alertsByStation.forEach((stationName, stationAlerts) -> sendBusAlerts(stationName, stationAlerts, now));
         log.info("Bus alert scheduler finished. now={}", now);
     }
 
-    private void sendBusAlert(BusAlert alert, LocalDateTime now) {
+    private void sendBusAlerts(String stationName, List<BusAlert> alerts, LocalDateTime now) {
+        SupportedBusStation station = busRouteRegistry.station(stationName);
+        List<BusArrivalResult> arrivals = busArrivalClient.getArrivals(station.stationId());
+        log.debug("Loaded station arrivals for alerts. stationName={}, stationId={}, arrivalCount={}, alertCount={}",
+                station.name(), station.stationId(), arrivals.size(), alerts.size());
+        alerts.forEach(alert -> sendBusAlert(alert, station, arrivals, now));
+    }
+
+    private void sendBusAlert(BusAlert alert, SupportedBusStation station, List<BusArrivalResult> arrivals, LocalDateTime now) {
         log.debug("Evaluating bus alert. alertId={}, userId={}, stationName={}, busNumber={}, lastNotifiedAt={}",
                 alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), alert.lastNotifiedAt());
         try {
-            SupportedBusStation station = busRouteRegistry.station(alert.stationName());
-            BusArrivalResult arrival = findArrival(station.stationId(), alert.busNumber());
+            BusArrivalResult arrival = findArrival(arrivals, alert.busNumber(), station.stationId());
             if (arrival == null) {
                 log.warn("No arrival info for alert. alertId={}, userId={}, stationName={}, busNumber={}",
                         alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber());
@@ -76,7 +85,7 @@ public class BusAlertScheduler {
             }
             log.info("Sending bus alert DM. alertId={}, userId={}, stationName={}, busNumber={}, predictTime1={}",
                     alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), arrival.predictTime1());
-            slackMessageSender.sendDm(alert.slackUserId(), message(alert, arrival));
+            slackMessageSender.sendDm(alert.slackUserId(), BusMessageFormatter.alertNotification(alert, arrival));
             alert.markNotified(now);
             busAlertRepository.save(alert);
             log.info("Bus alert marked as notified. alertId={}, userId={}, stationName={}, busNumber={}",
@@ -93,40 +102,13 @@ public class BusAlertScheduler {
         }
     }
 
-    private BusArrivalResult findArrival(String stationId, String busNumber) {
+    private BusArrivalResult findArrival(List<BusArrivalResult> arrivals, String busNumber, String stationId) {
         log.debug("Finding alert arrival by bus number. stationId={}, busNumber={}", stationId, busNumber);
-        return busArrivalClient.getArrivals(stationId)
-                .stream()
+        return arrivals.stream()
                 .peek(arrival -> log.debug("Alert arrival candidate. stationId={}, busNumber={}, predictTime1={}, predictTime2={}",
                         stationId, arrival.busNumber(), arrival.predictTime1(), arrival.predictTime2()))
                 .filter(arrival -> busNumber.equals(arrival.busNumber()))
                 .findFirst()
                 .orElse(null);
-    }
-
-    private String message(BusAlert alert, BusArrivalResult arrival) {
-        return """
-                🔔 %s번 버스가 곧 도착해요!
-
-                정류장: %s
-                예상 도착: %s
-                다음 버스: %s
-                알림 기준: %d분 전
-                알림 시간: %s~%s""".formatted(
-                alert.busNumber(),
-                alert.stationName(),
-                arrivalText(arrival.predictTime1()),
-                arrivalText(arrival.predictTime2()),
-                alert.notifyBeforeMinutes(),
-                alert.startTime().format(TIME_FORMATTER),
-                alert.endTime().format(TIME_FORMATTER)
-        );
-    }
-
-    private String arrivalText(Integer predictTime) {
-        if (predictTime == null) {
-            return "정보 없음";
-        }
-        return "%d분 후".formatted(predictTime);
     }
 }

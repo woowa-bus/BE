@@ -65,6 +65,29 @@ class BusAlertServiceTest {
     }
 
     @Test
+    void save_success_when_same_user_subscribes_multiple_buses() {
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "310",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+        service.save(new BusAlertCreateCommand(
+                "U123",
+                "텔레칩스",
+                "55",
+                5,
+                LocalTime.of(17, 45),
+                LocalTime.of(23, 30)
+        ));
+
+        assertEquals(2, repository.findAll().size());
+        assertEquals(2, service.findAllBySlackUserId("U123").size());
+    }
+
+    @Test
     void findAllBySlackUserId_success() {
         service.save(new BusAlertCreateCommand(
                 "U123",

@@ -27,6 +27,23 @@ class BusRouteRegistryTest {
     }
 
     @Test
+    void station_success_with_alias_name() {
+        BusRouteRegistry registry = BusRouteRegistry.of(List.of(
+                SupportedBusStation.of("텔레칩스", "200000001", List.of(
+                        SupportedBusRoute.of("310", "234000001", "12")
+                )),
+                SupportedBusStation.of("벤처타운(북문)", "200000002", List.of(
+                        SupportedBusRoute.of("310", "234000003", "14")
+                ))
+        ));
+
+        SupportedBusStation station = registry.station("벤처타워 북문");
+
+        assertEquals("200000002", station.stationId());
+        assertEquals("벤처타운(북문)", station.name());
+    }
+
+    @Test
     void station_fail_with_unsupported_station() {
         BusRouteRegistry registry = BusRouteRegistry.of(List.of(
                 SupportedBusStation.of("텔레칩스", "200000001", List.of(

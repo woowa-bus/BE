@@ -5,6 +5,7 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertDeleteCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.search.application.BusArrivalSearchService;
+import com.woowa.bus.message.BusMessageFormatter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -97,7 +98,7 @@ public class SlackCommandController {
         if (alerts.isEmpty()) {
             return ResponseEntity.ok("등록된 버스 알림이 없어요.");
         }
-        return ResponseEntity.ok(alertListMessage(alerts));
+        return ResponseEntity.ok(BusMessageFormatter.alertList(alerts));
     }
 
     @PostMapping("/slack/commands/alert-delete")
@@ -110,7 +111,7 @@ public class SlackCommandController {
             String[] tokens = tokens(text);
             log.debug("Slack alert-delete tokens parsed. userId={}, tokens={}", slackUserId, List.of(tokens));
             if (tokens.length != 2) {
-                return ResponseEntity.ok("/알림삭제 [정류장] [버스번호] 형식으로 입력해 주세요.");
+                return ResponseEntity.ok(BusMessageFormatter.alertDeleteUsage());
             }
             String response = busAlertService.delete(new BusAlertDeleteCommand(slackUserId, tokens[0], tokens[1]));
             log.info("Slack alert-delete command completed. userId={}, stationName={}, busNumber={}", slackUserId, tokens[0], tokens[1]);
@@ -152,36 +153,11 @@ public class SlackCommandController {
         }
     }
 
-    private String alertListMessage(List<BusAlertResponse> alerts) {
-        StringBuilder builder = new StringBuilder("🔔 등록된 버스 알림\n\n");
-        for (int index = 0; index < alerts.size(); index++) {
-            BusAlertResponse alert = alerts.get(index);
-            builder.append("%d. %s / %s번 / %d분 전 / %s~%s".formatted(
-                    index + 1,
-                    alert.stationName(),
-                    alert.busNumber(),
-                    alert.notifyBeforeMinutes(),
-                    alert.startTime().format(DateTimeFormatter.ofPattern("HH:mm")),
-                    alert.endTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-            ));
-            if (index < alerts.size() - 1) {
-                builder.append("\n");
-            }
-        }
-        return builder.toString();
-    }
-
     private String searchUsage() {
-        return """
-                /조회 [정류장]
-                /조회 [정류장] [버스번호] 형식으로 입력해 주세요.""";
+        return BusMessageFormatter.searchUsage();
     }
 
     private String alertUsage() {
-        return """
-                /알림 [정류장] [버스번호] [몇 분 전] [시작시간] [종료시간] 형식으로 입력해 주세요.
-
-                예시:
-                /알림 텔레칩스 310 5 17:45 23:30""";
+        return BusMessageFormatter.alertUsage();
     }
 }

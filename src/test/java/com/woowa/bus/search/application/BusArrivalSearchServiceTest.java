@@ -22,8 +22,8 @@ class BusArrivalSearchServiceTest {
         assertEquals("""
                 🚌 텔레칩스 정류장 도착 정보
 
-                310번: 4분 후 / 다음 13분 후
-                55번: 7분 후 / 다음 18분 후""", message);
+                • 310번: 4분 후 / 다음 13분 후
+                • 55번: 7분 후 / 다음 18분 후""", message);
     }
 
     @Test

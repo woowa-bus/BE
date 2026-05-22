@@ -19,9 +19,12 @@ public class BusRouteRegistry {
     public SupportedBusStation station(String stationName) {
         log.debug("Looking up supported station. stationName={}", stationName);
         List<SupportedBusStation> stations = stations();
-        log.debug("Supported stations loaded. count={}, stationNames={}", stations.size(), stations.stream().map(SupportedBusStation::name).toList());
+        log.debug("Supported stations loaded. count={}, stationNames={}",
+                stations.size(), stations.stream().map(SupportedBusStation::name).toList());
+        String resolvedStationName = BusStationNameResolver.resolve(stationName, stations);
+        log.debug("Station name resolved. requestedStationName={}, resolvedStationName={}", stationName, resolvedStationName);
         return stations.stream()
-                .filter(station -> station.name().equals(stationName))
+                .filter(station -> station.name().equals(resolvedStationName))
                 .findFirst()
                 .orElseThrow(() -> {
                     log.warn("Supported station not found. stationName={}, availableStations={}", stationName, stations.stream().map(SupportedBusStation::name).toList());

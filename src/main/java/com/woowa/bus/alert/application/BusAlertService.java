@@ -6,7 +6,8 @@ import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.route.domain.BusRouteRegistry;
-import java.time.format.DateTimeFormatter;
+import com.woowa.bus.route.domain.SupportedBusStation;
+import com.woowa.bus.message.BusMessageFormatter;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @Slf4j
 public class BusAlertService {
-
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final BusAlertRepository busAlertRepository;
     private final BusRouteRegistry busRouteRegistry;
@@ -31,14 +30,23 @@ public class BusAlertService {
         log.info("Saving bus alert. userId={}, stationName={}, busNumber={}, notifyBeforeMinutes={}, startTime={}, endTime={}",
                 command.slackUserId(), command.stationName(), command.busNumber(),
                 command.notifyBeforeMinutes(), command.startTime(), command.endTime());
-        busRouteRegistry.route(command.stationName(), command.busNumber());
+        SupportedBusStation station = busRouteRegistry.station(command.stationName());
+        busRouteRegistry.route(station.name(), command.busNumber());
+        BusAlertCreateCommand resolvedCommand = new BusAlertCreateCommand(
+                command.slackUserId(),
+                station.name(),
+                command.busNumber(),
+                command.notifyBeforeMinutes(),
+                command.startTime(),
+                command.endTime()
+        );
         return busAlertRepository.findByUserStationAndBus(
                         command.slackUserId(),
-                        command.stationName(),
+                        station.name(),
                         command.busNumber()
                 )
-                .map(alert -> update(alert, command))
-                .orElseGet(() -> create(command));
+                .map(alert -> update(alert, resolvedCommand, station.name()))
+                .orElseGet(() -> create(resolvedCommand, station.name()));
     }
 
     @Transactional(readOnly = true)
@@ -53,10 +61,11 @@ public class BusAlertService {
     public String delete(BusAlertDeleteCommand command) {
         log.info("Deleting bus alert. userId={}, stationName={}, busNumber={}",
                 command.slackUserId(), command.stationName(), command.busNumber());
-        busRouteRegistry.route(command.stationName(), command.busNumber());
+        SupportedBusStation station = busRouteRegistry.station(command.stationName());
+        busRouteRegistry.route(station.name(), command.busNumber());
         return busAlertRepository.findByUserStationAndBus(
                         command.slackUserId(),
-                        command.stationName(),
+                        station.name(),
                         command.busNumber()
                 )
                 .map(this::delete)
@@ -66,48 +75,30 @@ public class BusAlertService {
                         등록된 알림은 /알림목록 으로 확인할 수 있어요.""");
     }
 
-    private String create(BusAlertCreateCommand command) {
+    private String create(BusAlertCreateCommand command, String stationName) {
         BusAlert alert = BusAlert.create(
                 command.slackUserId(),
-                command.stationName(),
+                stationName,
                 command.busNumber(),
                 command.notifyBeforeMinutes(),
                 command.startTime(),
                 command.endTime()
         );
         busAlertRepository.save(alert);
-        log.info("Bus alert created. userId={}, stationName={}, busNumber={}", command.slackUserId(), command.stationName(), command.busNumber());
-        return successMessage("✅ 버스 알림을 등록했어요.", command);
+        log.info("Bus alert created. userId={}, stationName={}, busNumber={}", command.slackUserId(), stationName, command.busNumber());
+        return BusMessageFormatter.alertCreated("✅ 버스 알림을 등록했어요.", command);
     }
 
-    private String update(BusAlert alert, BusAlertCreateCommand command) {
+    private String update(BusAlert alert, BusAlertCreateCommand command, String stationName) {
         alert.updateNotificationRule(command.notifyBeforeMinutes(), command.startTime(), command.endTime());
         busAlertRepository.save(alert);
-        log.info("Bus alert updated. userId={}, stationName={}, busNumber={}", command.slackUserId(), command.stationName(), command.busNumber());
-        return successMessage("✅ 기존 알림을 업데이트했어요.", command);
+        log.info("Bus alert updated. userId={}, stationName={}, busNumber={}", command.slackUserId(), stationName, command.busNumber());
+        return BusMessageFormatter.alertCreated("✅ 기존 알림을 업데이트했어요.", command);
     }
 
     private String delete(BusAlert alert) {
         busAlertRepository.delete(alert);
         log.info("Bus alert deleted. userId={}, stationName={}, busNumber={}", alert.slackUserId(), alert.stationName(), alert.busNumber());
-        return "🗑️ %s %s번 알림을 삭제했어요.".formatted(alert.stationName(), alert.busNumber());
-    }
-
-    private String successMessage(String title, BusAlertCreateCommand command) {
-        return """
-                %s
-
-                정류장: %s
-                버스: %s번
-                알림 기준: 도착 %d분 전
-                알림 시간: %s~%s
-                알림 방식: DM""".formatted(
-                title,
-                command.stationName(),
-                command.busNumber(),
-                command.notifyBeforeMinutes(),
-                command.startTime().format(TIME_FORMATTER),
-                command.endTime().format(TIME_FORMATTER)
-        );
+        return BusMessageFormatter.alertDeleted(alert);
     }
 }
