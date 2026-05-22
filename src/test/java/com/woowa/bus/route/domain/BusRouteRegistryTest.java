@@ -15,7 +15,7 @@ class BusRouteRegistryTest {
                         SupportedBusRoute.of("310", "234000001", "12"),
                         SupportedBusRoute.of("55", "234000002", "13")
                 )),
-                SupportedBusStation.of("벤처타워(북문)", "200000002", List.of(
+                SupportedBusStation.of("벤처타운(북문)", "200000002", List.of(
                         SupportedBusRoute.of("310", "234000003", "14")
                 ))
         ));

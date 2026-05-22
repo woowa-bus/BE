@@ -3,20 +3,24 @@ package com.woowa.bus.alert.application;
 import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.alert.domain.BusAlertRepository;
 import com.woowa.bus.arrival.domain.BusArrivalClient;
+import com.woowa.bus.arrival.domain.BusArrivalException;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
+import com.woowa.bus.route.domain.BusRouteException;
 import com.woowa.bus.route.domain.BusRouteRegistry;
-import com.woowa.bus.route.domain.SupportedBusRoute;
 import com.woowa.bus.route.domain.SupportedBusStation;
 import com.woowa.bus.slack.application.SlackMessageSender;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Slf4j
 public class BusAlertScheduler {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -48,20 +52,56 @@ public class BusAlertScheduler {
     @Transactional
     public void sendBusAlerts() {
         LocalDateTime now = LocalDateTime.now(clock);
-        busAlertRepository.findAll()
-                .forEach(alert -> sendBusAlert(alert, now));
+        List<BusAlert> alerts = busAlertRepository.findAll();
+        log.info("Bus alert scheduler started. now={}, alertCount={}", now, alerts.size());
+        alerts.forEach(alert -> sendBusAlert(alert, now));
+        log.info("Bus alert scheduler finished. now={}", now);
     }
 
     private void sendBusAlert(BusAlert alert, LocalDateTime now) {
-        SupportedBusStation station = busRouteRegistry.station(alert.stationName());
-        SupportedBusRoute route = station.route(alert.busNumber());
-        BusArrivalResult arrival = busArrivalClient.getArrival(station.stationId(), route.routeId(), route.staOrder());
-        if (!alert.canSendNotification(now, arrival.predictTime1(), cooldownMinutes)) {
-            return;
+        log.debug("Evaluating bus alert. alertId={}, userId={}, stationName={}, busNumber={}, lastNotifiedAt={}",
+                alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), alert.lastNotifiedAt());
+        try {
+            SupportedBusStation station = busRouteRegistry.station(alert.stationName());
+            BusArrivalResult arrival = findArrival(station.stationId(), alert.busNumber());
+            if (arrival == null) {
+                log.warn("No arrival info for alert. alertId={}, userId={}, stationName={}, busNumber={}",
+                        alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber());
+                return;
+            }
+            if (!alert.canSendNotification(now, arrival.predictTime1(), cooldownMinutes)) {
+                log.debug("Bus alert skipped. alertId={}, userId={}, stationName={}, busNumber={}, predictTime1={}, cooldownMinutes={}",
+                        alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), arrival.predictTime1(), cooldownMinutes);
+                return;
+            }
+            log.info("Sending bus alert DM. alertId={}, userId={}, stationName={}, busNumber={}, predictTime1={}",
+                    alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), arrival.predictTime1());
+            slackMessageSender.sendDm(alert.slackUserId(), message(alert, arrival));
+            alert.markNotified(now);
+            busAlertRepository.save(alert);
+            log.info("Bus alert marked as notified. alertId={}, userId={}, stationName={}, busNumber={}",
+                    alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber());
+        } catch (BusRouteException exception) {
+            log.error("Bus alert route lookup failed. alertId={}, userId={}, stationName={}, busNumber={}",
+                    alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), exception);
+        } catch (BusArrivalException exception) {
+            log.warn("Bus alert arrival lookup failed. alertId={}, userId={}, stationName={}, busNumber={}",
+                    alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), exception);
+        } catch (RuntimeException exception) {
+            log.error("Bus alert send failed unexpectedly. alertId={}, userId={}, stationName={}, busNumber={}",
+                    alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), exception);
         }
-        slackMessageSender.sendDm(alert.slackUserId(), message(alert, arrival));
-        alert.markNotified(now);
-        busAlertRepository.save(alert);
+    }
+
+    private BusArrivalResult findArrival(String stationId, String busNumber) {
+        log.debug("Finding alert arrival by bus number. stationId={}, busNumber={}", stationId, busNumber);
+        return busArrivalClient.getArrivals(stationId)
+                .stream()
+                .peek(arrival -> log.debug("Alert arrival candidate. stationId={}, busNumber={}, predictTime1={}, predictTime2={}",
+                        stationId, arrival.busNumber(), arrival.predictTime1(), arrival.predictTime2()))
+                .filter(arrival -> busNumber.equals(arrival.busNumber()))
+                .findFirst()
+                .orElse(null);
     }
 
     private String message(BusAlert alert, BusArrivalResult arrival) {

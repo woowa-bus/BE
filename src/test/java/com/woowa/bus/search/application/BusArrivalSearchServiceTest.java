@@ -27,6 +27,23 @@ class BusArrivalSearchServiceTest {
     }
 
     @Test
+    void searchStation_fail_when_station_has_no_routes() {
+        BusArrivalSearchService service = new BusArrivalSearchService(
+                BusRouteRegistry.of(List.of(
+                        SupportedBusStation.of("텔레칩스", "200000001", List.of())
+                )),
+                new EmptyBusArrivalClient()
+        );
+
+        String message = service.searchStation("텔레칩스");
+
+        assertEquals("""
+                등록된 버스 정보가 없어요.
+
+                정류장: 텔레칩스""", message);
+    }
+
+    @Test
     void searchBus_success() {
         BusArrivalSearchService service = new BusArrivalSearchService(registry(), new FakeBusArrivalClient());
 
@@ -63,19 +80,27 @@ class BusArrivalSearchServiceTest {
     private static class FakeBusArrivalClient implements BusArrivalClient {
 
         @Override
-        public BusArrivalResult getArrival(String stationId, String routeId, String staOrder) {
-            if ("234000001".equals(routeId)) {
-                return new BusArrivalResult("310", 4, 13);
-            }
-            return new BusArrivalResult("55", 7, 18);
+        public List<BusArrivalResult> getArrivals(String stationId) {
+            return List.of(
+                    new BusArrivalResult("310", 4, 13),
+                    new BusArrivalResult("55", 7, 18)
+            );
         }
     }
 
     private static class FailingBusArrivalClient implements BusArrivalClient {
 
         @Override
-        public BusArrivalResult getArrival(String stationId, String routeId, String staOrder) {
+        public List<BusArrivalResult> getArrivals(String stationId) {
             throw new BusArrivalException("버스 정보를 가져오지 못했어요.", new RuntimeException());
+        }
+    }
+
+    private static class EmptyBusArrivalClient implements BusArrivalClient {
+
+        @Override
+        public List<BusArrivalResult> getArrivals(String stationId) {
+            return List.of();
         }
     }
 }

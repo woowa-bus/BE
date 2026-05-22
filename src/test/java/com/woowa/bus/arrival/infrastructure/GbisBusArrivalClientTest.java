@@ -7,27 +7,35 @@ import com.woowa.bus.arrival.domain.BusArrivalResult;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GbisBusArrivalClientTest {
 
+    private static final String ENCODED_SERVICE_KEY = "test%2Fkey%3D%3D";
+
     private HttpServer server;
+    private AtomicReference<String> requestQuery;
 
     @BeforeEach
     void setUp() throws IOException {
+        requestQuery = new AtomicReference<>();
         server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/getBusArrivalItemv2", exchange -> {
+        server.createContext("/getBusArrivalListv2", exchange -> {
+            requestQuery.set(exchange.getRequestURI().getRawQuery());
             String response = """
                     {
                       "response": {
                         "msgBody": {
-                          "busArrivalItem": {
-                            "routeName": "310",
-                            "predictTime1": 4,
-                            "predictTime2": 13
-                          }
+                          "busArrivalList": [
+                            {
+                              "routeName": "310",
+                              "predictTime1": 4,
+                              "predictTime2": 13
+                            }
+                          ]
                         }
                       }
                     }""";
@@ -45,16 +53,21 @@ class GbisBusArrivalClientTest {
     }
 
     @Test
-    void getArrival_success() {
+    void getArrivals_success() {
         GbisBusArrivalClient client = new GbisBusArrivalClient(
-                "test-key",
-                "http://localhost:%d/getBusArrivalItemv2".formatted(server.getAddress().getPort())
+                ENCODED_SERVICE_KEY,
+                "http://localhost:%d/getBusArrivalListv2".formatted(server.getAddress().getPort())
         );
 
-        BusArrivalResult result = client.getArrival("200000001", "234000001", "12");
+        var results = client.getArrivals("200000001");
 
-        assertEquals("310", result.busNumber());
-        assertEquals(4, result.predictTime1());
-        assertEquals(13, result.predictTime2());
+        assertEquals(1, results.size());
+        assertEquals("310", results.getFirst().busNumber());
+        assertEquals(4, results.getFirst().predictTime1());
+        assertEquals(13, results.getFirst().predictTime2());
+        assertEquals(
+                "serviceKey=%s&stationId=200000001&format=json".formatted(ENCODED_SERVICE_KEY),
+                requestQuery.get()
+        );
     }
 }

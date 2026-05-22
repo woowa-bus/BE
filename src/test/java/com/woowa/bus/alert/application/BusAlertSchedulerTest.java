@@ -72,8 +72,8 @@ class BusAlertSchedulerTest {
     private static class FakeBusArrivalClient implements BusArrivalClient {
 
         @Override
-        public BusArrivalResult getArrival(String stationId, String routeId, String staOrder) {
-            return new BusArrivalResult("310", 4, 13);
+        public List<BusArrivalResult> getArrivals(String stationId) {
+            return List.of(new BusArrivalResult("310", 4, 13));
         }
     }
 

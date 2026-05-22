@@ -8,11 +8,15 @@ import com.woowa.bus.arrival.domain.BusArrivalResult;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
+@Slf4j
 public class GbisBusArrivalClient implements BusArrivalClient {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -23,56 +27,72 @@ public class GbisBusArrivalClient implements BusArrivalClient {
 
     public GbisBusArrivalClient(
             @Value("${gbis.service-key:}") String serviceKey,
-            @Value("${gbis.arrival-url:https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalItemv2}")
+            @Value("${gbis.endpoint-url:https://apis.data.go.kr/6410000/busarrivalservice/v2/getBusArrivalListv2}")
             String requestUrl
     ) {
         this.serviceKey = serviceKey;
-        this.requestUrl = requestUrl;
+        this.requestUrl = requestUrl.endsWith("getBusArrivalListv2")
+                ? requestUrl
+                : requestUrl.endsWith("/")
+                ? requestUrl + "getBusArrivalListv2"
+                : requestUrl + "/getBusArrivalListv2";
         this.restClient = RestClient.create();
     }
 
     @Override
-    public BusArrivalResult getArrival(String stationId, String routeId, String staOrder) {
+    public List<BusArrivalResult> getArrivals(String stationId) {
         try {
+            log.debug("Requesting GBIS arrivals. stationId={}, url={}", stationId, requestUrl);
             String response = restClient.get()
-                    .uri(requestUri(stationId, routeId, staOrder))
+                    .uri(requestUri(stationId))
                     .retrieve()
                     .body(String.class);
+            log.debug("GBIS arrival response received. stationId={}, responseLength={}", stationId, response == null ? 0 : response.length());
             return parse(response);
         } catch (RuntimeException exception) {
+            log.warn("GBIS arrival request failed. stationId={}", stationId, exception);
             throw new BusArrivalException("버스 정보를 가져오지 못했어요.", exception);
         }
     }
 
-    private URI requestUri(String stationId, String routeId, String staOrder) {
-        String query = "serviceKey=%s&stationId=%s&routeId=%s&staOrder=%s&format=json".formatted(
-                encode(serviceKey),
-                encode(stationId),
-                encode(routeId),
-                encode(staOrder)
+    private URI requestUri(String stationId) {
+        String query = "serviceKey=%s&stationId=%s&format=json".formatted(
+                serviceKey,
+                encode(stationId)
         );
         return URI.create(requestUrl + "?" + query);
     }
 
-    private BusArrivalResult parse(String response) {
+    private List<BusArrivalResult> parse(String response) {
         try {
-            JsonNode item = arrivalItem(OBJECT_MAPPER.readTree(response));
-            return new BusArrivalResult(
-                    text(item, "routeName"),
-                    integer(item, "predictTime1"),
-                    integer(item, "predictTime2")
-            );
+            JsonNode root = OBJECT_MAPPER.readTree(response);
+            JsonNode items = root.path("response").path("msgBody").path("busArrivalList");
+            if (items.isMissingNode() || items.isNull()) {
+                log.debug("GBIS arrival list missing.");
+                return List.of();
+            }
+            List<BusArrivalResult> arrivals = new ArrayList<>();
+            if (items.isArray()) {
+                items.forEach(item -> addArrival(arrivals, item));
+            } else {
+                addArrival(arrivals, items);
+            }
+            log.debug("GBIS arrival parsed successfully. arrivalCount={}", arrivals.size());
+            return arrivals;
         } catch (Exception exception) {
-            throw new BusArrivalException("버스 정보를 가져오지 못했어요.", exception);
+            log.warn("GBIS arrival parsing failed.", exception);
+            return List.of();
         }
     }
 
-    private JsonNode arrivalItem(JsonNode root) {
-        JsonNode item = root.path("response").path("msgBody").path("busArrivalItem");
-        if (item.isArray()) {
-            return item.isEmpty() ? OBJECT_MAPPER.createObjectNode() : item.get(0);
+    private void addArrival(List<BusArrivalResult> arrivals, JsonNode item) {
+        String routeName = text(item, "routeName");
+        Integer predictTime1 = integer(item, "predictTime1");
+        Integer predictTime2 = integer(item, "predictTime2");
+        if (routeName.isBlank() && predictTime1 == null && predictTime2 == null) {
+            return;
         }
-        return item;
+        arrivals.add(new BusArrivalResult(routeName, predictTime1, predictTime2));
     }
 
     private String text(JsonNode node, String fieldName) {
