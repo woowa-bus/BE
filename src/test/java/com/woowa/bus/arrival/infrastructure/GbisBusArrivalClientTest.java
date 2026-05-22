@@ -3,7 +3,10 @@ package com.woowa.bus.arrival.infrastructure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.sun.net.httpserver.HttpServer;
+import com.woowa.bus.arrival.application.BusArrivalMetrics;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -54,9 +57,11 @@ class GbisBusArrivalClientTest {
 
     @Test
     void getArrivals_success() {
+        BusArrivalMetrics metrics = new BusArrivalMetrics(Clock.system(ZoneId.of("Asia/Seoul")));
         GbisBusArrivalClient client = new GbisBusArrivalClient(
                 ENCODED_SERVICE_KEY,
-                "http://localhost:%d/getBusArrivalListv2".formatted(server.getAddress().getPort())
+                "http://localhost:%d/getBusArrivalListv2".formatted(server.getAddress().getPort()),
+                metrics
         );
 
         var results = client.getArrivals("200000001");
@@ -69,5 +74,6 @@ class GbisBusArrivalClientTest {
                 "serviceKey=%s&stationId=200000001&format=json".formatted(ENCODED_SERVICE_KEY),
                 requestQuery.get()
         );
+        assertEquals(1, metrics.snapshot().successCount());
     }
 }

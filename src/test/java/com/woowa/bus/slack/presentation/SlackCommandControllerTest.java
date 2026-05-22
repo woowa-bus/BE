@@ -10,6 +10,7 @@ import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.search.application.BusArrivalSearchService;
 import com.woowa.bus.slack.application.BusCommandHelpService;
+import com.woowa.bus.slack.application.BusStatusService;
 import com.woowa.bus.slack.application.SlackBlockKitBuilder;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -73,6 +74,7 @@ class SlackCommandControllerTest {
                 new FakeBusArrivalSearchService(),
                 new FakeBusAlertServiceWithAlert(),
                 new FakeBusCommandHelpService(),
+                new FakeBusStatusService(),
                 new SlackBlockKitBuilder()
         );
 
@@ -101,11 +103,21 @@ class SlackCommandControllerTest {
         assertEquals("help text", response);
     }
 
+    @Test
+    void status_success() {
+        SlackCommandController controller = controller();
+
+        String response = controller.status("U123", "").getBody();
+
+        assertEquals("status text", response);
+    }
+
     private SlackCommandController controller() {
         return new SlackCommandController(
                 new FakeBusArrivalSearchService(),
                 new FakeBusAlertService(),
                 new FakeBusCommandHelpService(),
+                new FakeBusStatusService(),
                 new SlackBlockKitBuilder()
         );
     }
@@ -136,6 +148,18 @@ class SlackCommandControllerTest {
         @Override
         public String help() {
             return "help text";
+        }
+    }
+
+    private static class FakeBusStatusService extends BusStatusService {
+
+        FakeBusStatusService() {
+            super(null);
+        }
+
+        @Override
+        public String status() {
+            return "status text";
         }
     }
 
