@@ -15,6 +15,7 @@ class SlackApiMessageSenderTest {
 
     private HttpServer server;
     private String requestBody = "";
+    private String responseRequestBody = "";
     private String authorization = "";
 
     @BeforeEach
@@ -24,6 +25,14 @@ class SlackApiMessageSenderTest {
             authorization = exchange.getRequestHeaders().getFirst("Authorization");
             requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             String response = "{\"ok\":true}";
+            exchange.sendResponseHeaders(200, response.getBytes().length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(response.getBytes());
+            }
+        });
+        server.createContext("/response", exchange -> {
+            responseRequestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            String response = "ok";
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream outputStream = exchange.getResponseBody()) {
                 outputStream.write(response.getBytes());
@@ -62,5 +71,21 @@ class SlackApiMessageSenderTest {
 
         assertTrue(requestBody.contains("\"blocks\":["));
         assertTrue(requestBody.contains("\"text\":\"hi\""));
+    }
+
+    @Test
+    void respond_posts_body_to_response_url() {
+        SlackApiMessageSender sender = new SlackApiMessageSender(
+                "test-slack-token",
+                "http://localhost:%d/chat.postMessage".formatted(server.getAddress().getPort())
+        );
+
+        sender.respond(
+                "http://localhost:%d/response".formatted(server.getAddress().getPort()),
+                "{\"replace_original\":true,\"text\":\"삭제했어요.\"}"
+        );
+
+        assertTrue(responseRequestBody.contains("\"replace_original\":true"));
+        assertTrue(responseRequestBody.contains("삭제했어요."));
     }
 }

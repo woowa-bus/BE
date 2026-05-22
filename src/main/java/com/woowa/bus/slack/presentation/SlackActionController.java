@@ -58,6 +58,7 @@ public class SlackActionController {
                 return handleViewSubmission(userId, root.path("view"));
             }
 
+            String responseUrl = root.path("response_url").asText();
             JsonNode actions = root.path("actions");
             if (!actions.isArray()) {
                 return empty();
@@ -65,6 +66,10 @@ public class SlackActionController {
             for (JsonNode action : actions) {
                 String body = handleAction(userId, action);
                 if (body != null) {
+                    if (responseUrl != null && !responseUrl.isBlank()) {
+                        slackMessageSender.respond(responseUrl, body);
+                        return empty();
+                    }
                     return jsonOk(body);
                 }
             }

@@ -46,11 +46,13 @@ class SlackActionControllerTest {
     @Test
     void action_delete_replaces_original_message_with_deleted_message_then_remaining_alerts() throws Exception {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = controller(alertService);
+        FakeSlackMessageSender messageSender = new FakeSlackMessageSender();
+        SlackActionController controller = controller(alertService, messageSender);
 
         String payload = """
                 {
                   "type": "block_actions",
+                  "response_url": "https://hooks.slack.com/actions/test",
                   "user": {"id": "U123"},
                   "actions": [
                     {"action_id": "alert_delete", "value": "텔레칩스|310"}
@@ -58,16 +60,18 @@ class SlackActionControllerTest {
                 }""";
 
         String body = controller.action(payload).getBody();
-        JsonNode blocks = OBJECT_MAPPER.readTree(body).get("blocks");
+        JsonNode blocks = OBJECT_MAPPER.readTree(messageSender.lastResponseBodyJson).get("blocks");
 
-        assertTrue(body.contains("\"replace_original\":true"));
+        assertEquals("", body);
+        assertEquals("https://hooks.slack.com/actions/test", messageSender.lastResponseUrl);
+        assertTrue(messageSender.lastResponseBodyJson.contains("\"replace_original\":true"));
         assertEquals("context", blocks.get(0).get("type").asText());
         assertTrue(blocks.get(0).get("elements").get(0).get("text").asText()
                 .contains("텔레칩스 310번 알림을 삭제했어요."));
         assertEquals("divider", blocks.get(1).get("type").asText());
         assertEquals("header", blocks.get(2).get("type").asText());
-        assertTrue(body.contains("🔔 등록된 버스 알림"));
-        assertTrue(body.contains("벤처타운(북문)"));
+        assertTrue(messageSender.lastResponseBodyJson.contains("🔔 등록된 버스 알림"));
+        assertTrue(messageSender.lastResponseBodyJson.contains("벤처타운(북문)"));
     }
 
     @Test
@@ -145,11 +149,13 @@ class SlackActionControllerTest {
     @Test
     void action_boarded_marks_alert_and_replaces_message() {
         FakeBusAlertService alertService = new FakeBusAlertService();
-        SlackActionController controller = controller(alertService);
+        FakeSlackMessageSender messageSender = new FakeSlackMessageSender();
+        SlackActionController controller = controller(alertService, messageSender);
 
         String payload = """
                 {
                   "type": "block_actions",
+                  "response_url": "https://hooks.slack.com/actions/test",
                   "user": {"id": "U123"},
                   "actions": [
                     {"action_id": "alert_boarded", "value": "텔레칩스|310"}
@@ -161,9 +167,10 @@ class SlackActionControllerTest {
         assertEquals("U123", alertService.lastBoardedUser);
         assertEquals("텔레칩스", alertService.lastBoardedStation);
         assertEquals("310", alertService.lastBoardedBus);
-        assertTrue(body.contains("\"replace_original\":true"));
-        assertTrue(body.contains("오늘 하루 고생하셨어요 내일 봐요~"));
-        assertTrue(body.contains("오늘 알람은 더이상 울리지 않습니다."));
+        assertEquals("", body);
+        assertTrue(messageSender.lastResponseBodyJson.contains("\"replace_original\":true"));
+        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 하루 고생하셨어요 내일 봐요~"));
+        assertTrue(messageSender.lastResponseBodyJson.contains("오늘 알람은 더이상 울리지 않습니다."));
     }
 
     @Test
@@ -198,12 +205,20 @@ class SlackActionControllerTest {
         private String lastUserId;
         private String lastText;
         private String lastBlocksJson;
+        private String lastResponseUrl;
+        private String lastResponseBodyJson;
 
         @Override
         public void sendDm(String slackUserId, String text, String blocksJson) {
             this.lastUserId = slackUserId;
             this.lastText = text;
             this.lastBlocksJson = blocksJson;
+        }
+
+        @Override
+        public void respond(String responseUrl, String bodyJson) {
+            this.lastResponseUrl = responseUrl;
+            this.lastResponseBodyJson = bodyJson;
         }
     }
 

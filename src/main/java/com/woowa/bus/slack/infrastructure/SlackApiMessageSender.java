@@ -56,4 +56,22 @@ public class SlackApiMessageSender implements SlackMessageSender {
             log.error("Slack DM blocks parse failed. userId={}", slackUserId, exception);
         }
     }
+
+    @Override
+    public void respond(String responseUrl, String bodyJson) {
+        try {
+            log.debug("Sending Slack interaction response. url={}, bodyLength={}",
+                    responseUrl, bodyJson == null ? 0 : bodyJson.length());
+            restClient.post()
+                    .uri(responseUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(bodyJson)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Slack interaction response sent.");
+        } catch (RuntimeException exception) {
+            log.warn("Slack interaction response send failed.", exception);
+            throw exception;
+        }
+    }
 }

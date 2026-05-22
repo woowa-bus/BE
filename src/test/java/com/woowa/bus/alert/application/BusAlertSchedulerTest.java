@@ -170,6 +170,10 @@ class BusAlertSchedulerTest {
                 blocks.add(blocksJson);
             }
         }
+
+        @Override
+        public void respond(String responseUrl, String bodyJson) {
+        }
     }
 
     private static class FakeBusAlertHistoryRepository implements BusAlertHistoryRepository {
