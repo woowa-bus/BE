@@ -57,7 +57,7 @@ class SlackActionControllerTest {
 
         assertTrue(body.contains("\"replace_original\":true"));
         assertTrue(body.contains("🔔 등록된 버스 알림"));
-        assertTrue(body.contains("삭제되었습니다."));
+        assertTrue(body.contains("텔레칩스 310번 알림을 삭제했어요."));
         assertTrue(body.contains("벤처타운(북문)"));
     }
 
@@ -153,7 +153,7 @@ class SlackActionControllerTest {
         assertEquals("텔레칩스", alertService.lastBoardedStation);
         assertEquals("310", alertService.lastBoardedBus);
         assertTrue(body.contains("\"replace_original\":true"));
-        assertTrue(body.contains("좋은 하루"));
+        assertTrue(body.contains("모든 버스 알림이 울리지 않습니다."));
     }
 
     @Test
@@ -215,13 +215,13 @@ class SlackActionControllerTest {
             this.lastBoardedUser = slackUserId;
             this.lastBoardedStation = stationName;
             this.lastBoardedBus = busNumber;
-            return "🚌 좋은 하루 보내세요! 오늘은 더 이상 %s %s번 알림을 보내지 않을게요.".formatted(stationName, busNumber);
+            return "🚌 좋은 하루 보내세요! 오늘은 더 이상 모든 버스 알림이 울리지 않습니다.";
         }
 
         @Override
         public String delete(BusAlertDeleteCommand command) {
             this.lastDeleted = command;
-            return "deleted";
+            return "🗑️ %s %s번 알림을 삭제했어요.".formatted(command.stationName(), command.busNumber());
         }
 
         @Override
