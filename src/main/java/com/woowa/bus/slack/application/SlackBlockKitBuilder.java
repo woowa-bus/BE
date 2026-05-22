@@ -8,6 +8,7 @@ import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
 import com.woowa.bus.search.application.BusArrivalView;
 import com.woowa.bus.search.application.StationArrivalView;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -66,7 +67,7 @@ public class SlackBlockKitBuilder {
         return context;
     }
 
-    public String alertNotificationBlocks(BusAlert alert, BusArrivalResult arrival) {
+    public String alertNotificationBlocks(BusAlert alert, BusArrivalResult arrival, LocalDateTime now) {
         ArrayNode blocks = OBJECT_MAPPER.createArrayNode();
         blocks.add(header("🔔 %s번 버스가 곧 도착해요!".formatted(alert.busNumber())));
 
@@ -74,7 +75,8 @@ public class SlackBlockKitBuilder {
         section.put("type", "section");
         ObjectNode text = section.putObject("text");
         text.put("type", "mrkdwn");
-        text.put("text", "*정류장:* %s\n*예상 도착:* %s\n*다음 버스:* %s\n*알림 기준:* %d분 전\n*알림 시간:* %s~%s".formatted(
+        text.put("text", "*현재 시각:* %s\n*정류장:* %s\n*예상 도착:* %s\n*다음 버스:* %s\n*알림 기준:* %d분 전\n*알림 시간:* %s~%s".formatted(
+                now.format(TIME_FORMATTER),
                 alert.stationName(),
                 arrivalText(arrival.predictTime1()),
                 arrivalText(arrival.predictTime2()),

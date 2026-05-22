@@ -96,8 +96,8 @@ public class BusAlertScheduler {
                     alert.id(), alert.slackUserId(), alert.stationName(), alert.busNumber(), arrival.predictTime1());
             slackMessageSender.sendDm(
                     alert.slackUserId(),
-                    BusMessageFormatter.alertNotification(alert, arrival),
-                    slackBlockKitBuilder.alertNotificationBlocks(alert, arrival)
+                    BusMessageFormatter.alertNotification(alert, arrival, now),
+                    slackBlockKitBuilder.alertNotificationBlocks(alert, arrival, now)
             );
             alert.markNotified(now);
             busAlertRepository.save(alert);

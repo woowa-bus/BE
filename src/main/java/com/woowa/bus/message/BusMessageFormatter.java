@@ -4,6 +4,7 @@ import com.woowa.bus.alert.application.dto.BusAlertCreateCommand;
 import com.woowa.bus.alert.application.dto.BusAlertResponse;
 import com.woowa.bus.alert.domain.BusAlert;
 import com.woowa.bus.arrival.domain.BusArrivalResult;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -85,16 +86,18 @@ public final class BusMessageFormatter {
         return "🗑️ %s %s번 알림을 삭제했어요.".formatted(alert.stationName(), alert.busNumber());
     }
 
-    public static String alertNotification(BusAlert alert, BusArrivalResult arrival) {
+    public static String alertNotification(BusAlert alert, BusArrivalResult arrival, LocalDateTime now) {
         return """
                 🔔 %s번 버스가 곧 도착해요!
 
+                현재 시각: %s
                 정류장: %s
                 예상 도착: %s
                 다음 버스: %s
                 알림 기준: %d분 전
                 알림 시간: %s~%s""".formatted(
                 alert.busNumber(),
+                now.format(TIME_FORMATTER),
                 alert.stationName(),
                 arrivalText(arrival.predictTime1()),
                 arrivalText(arrival.predictTime2()),
